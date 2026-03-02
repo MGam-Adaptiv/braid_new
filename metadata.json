@@ -1,0 +1,7 @@
+{
+  "name": "BraidStudio v.2",
+  "description": "A collaborative workspace where teachers and AI drafting partners braid creativity into high-quality educational materials.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

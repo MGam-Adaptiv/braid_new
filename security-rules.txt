@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // USERS COLLECTION
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId);
+    }
+
+    // MAGIC LINKS (Publicly readable for students)
+    match /magicLinks/{linkId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // ACTIVITIES COLLECTION 
+    match /activities/{activityId} {
+      allow read: if true; 
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // RESPONSES (Students can create, Teachers can read)
+    match /responses/{responseId} {
+      allow create: if true;
+      allow read: if isSignedIn();
+    }
+
+    // PAGES COLLECTION (Strictly Teacher/Admin)
+    match /pages/{pageId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // MATERIALS COLLECTION
+    match /materials/{materialId} {
+      allow read: if isSignedIn() && (resource.data.teacherId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.teacherId == request.auth.uid;
+    }
+
+    // TEACHER LABELS COLLECTION
+    match /teacherLabels/{labelId} {
+      allow read: if isSignedIn() && (resource.data.teacherId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.teacherId == request.auth.uid;
+    }
+
+    // ANALYTICS COLLECTION
+    match /analytics/{docId} {
+      allow create: if isSignedIn();
+      allow read: if isAdmin();
+    }
+
+    // CONTENT ASSETS (Digital Twins) - Aggregated data
+    // Used by the sensor to track interactions and remixes.
+    // Must be writable by any authenticated user who uses the material.
+    match /contentAssets/{assetId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // SYSTEM COLLECTION (Global Stats)
+    match /system/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    // Allow admins to list all activities for dashboard stats
+    match /{path=**}/activities/{activityId} {
+      allow list: if isAdmin();
+    }
+    
+    match /{path=**}/users/{userId} {
+      allow list: if isAdmin();
+    }
+  }
+}
