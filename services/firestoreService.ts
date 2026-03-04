@@ -178,6 +178,10 @@ export const updateActivity = async (activityId: string, updates: Partial<Activi
   }
 };
 
+export const updateActivityField = async (activityId: string, fields: Partial<Activity>) => {
+  await db.collection('activities').doc(activityId).update(fields);
+};
+
 // PAGE SOURCE MANAGEMENT
 export const uploadPage = async (userId: string, pageData: Partial<PageMetadata>): Promise<PageMetadata> => {
   try {
@@ -363,27 +367,39 @@ export const getMagicLinksForActivity = async (activityId: string) => {
 export const saveStudentResponse = async (response: { magicLinkId: string, studentName: string, answers: any[], score: number, totalQuestions: number, submittedAt: number }) => {
   try {
     const linkRef = db.collection('magicLinks').doc(response.magicLinkId);
-    const linkSnap = await linkRef.get();
-    const linkData = linkSnap.data();
-    const classTagId = linkData?.classTagId || null;
+    
+    // 1. Get Context (Best Effort)
+    let classTagId = null;
+    try {
+        const linkSnap = await linkRef.get();
+        const linkData = linkSnap.data();
+        classTagId = linkData?.classTagId || null;
+    } catch (e) {
+        console.warn("Error fetching context for response:", e);
+    }
 
+    // 2. Critical Write
     const docRef = await linkRef.collection('responses').add({
       ...response,
       classTagId, 
       submittedAt: serverTimestamp()
     });
     
-    await linkRef.update({
+    // 3. Non-Critical Updates (Fire-and-forget)
+    // We intentionally do not await these to prevent blocking and to ignore errors
+    linkRef.update({
       responsesCount: increment(1)
-    });
+    }).catch(e => console.warn("Non-critical update failed (responsesCount):", e));
 
     if (classTagId) {
-      await db.collection('classTags').doc(classTagId).update({
+      db.collection('classTags').doc(classTagId).update({
         studentCount: increment(1)
-      });
+      }).catch(e => console.warn("Non-critical update failed (studentCount):", e));
     }
+
     return docRef.id;
   } catch (error: any) {
+    console.error("Critical error saving response:", error);
     throw error;
   }
 };
