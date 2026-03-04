@@ -98,10 +98,17 @@ CRITICAL: You MUST output in this EXACT structure with these EXACT markers:
       throw new Error('No content received from Mistral');
     }
 
+    const usage = chatResponse.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+    const tokensUsed = {
+      promptTokens: usage.promptTokens,
+      completionTokens: usage.completionTokens,
+      totalTokens: usage.totalTokens || (usage.promptTokens + usage.completionTokens)
+    };
+
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ result: content }),
+      body: JSON.stringify({ result: content, tokensUsed }),
     };
 
   } catch (error: any) {
