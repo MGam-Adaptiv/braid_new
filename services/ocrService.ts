@@ -1,3 +1,5 @@
+import { trackTokenUsage } from './tokenService';
+
 export interface OCRResult {
   fullText: string;
 }
@@ -6,7 +8,7 @@ export interface OCRResult {
  * extractTextFromImage: Extracts readable text from educational materials provided as base64 images.
  * Uses Mistral Vision via Netlify Function.
  */
-export const extractTextFromImage = async (base64Image: string): Promise<OCRResult> => {
+export const extractTextFromImage = async (base64Image: string, userId: string): Promise<OCRResult> => {
   try {
     const response = await fetch('/.netlify/functions/ai-ocr', {
       method: 'POST',
@@ -24,6 +26,11 @@ export const extractTextFromImage = async (base64Image: string): Promise<OCRResu
     }
 
     const data = await response.json();
+    
+    if (data.tokensUsed) {
+      await trackTokenUsage(userId, data.tokensUsed.totalTokens, 'ocr');
+    }
+
     return { fullText: data.fullText || '' };
 
   } catch (error) {
