@@ -183,10 +183,17 @@ ${answerKey}
       throw new Error('Invalid JSON response from AI');
     }
 
+    const usage = chatResponse.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+    const tokensUsed = {
+      promptTokens: usage.promptTokens,
+      completionTokens: usage.completionTokens,
+      totalTokens: usage.totalTokens || (usage.promptTokens + usage.completionTokens)
+    };
+
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ result: parsedResult }),
+      body: JSON.stringify({ result: parsedResult, tokensUsed }),
     };
 
   } catch (error: any) {
