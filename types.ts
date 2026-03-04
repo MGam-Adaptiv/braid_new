@@ -1,5 +1,3 @@
-
-
 export enum UserRole {
   ADMIN = 'admin',
   SCHOOL_OWNER = 'school_owner',
