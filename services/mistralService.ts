@@ -1,4 +1,5 @@
 import { SourceMaterial, WorkbenchItem, InteractiveData } from "../types";
+import { trackTokenUsage } from './tokenService';
 
 export interface ExtractionResult {
   vocabulary?: { items: string[] };
@@ -53,7 +54,7 @@ const cleanAnalysis = (rawResult: ExtractionResult): ExtractionResult => {
 /**
  * Extract educational metadata from a page image using Mistral Vision via Netlify Function.
  */
-export const readPage = async (blobUrl: string): Promise<ExtractionResult> => {
+export const readPage = async (blobUrl: string, userId: string): Promise<ExtractionResult> => {
   try {
     const base64Data = await blobUrlToBase64(blobUrl);
 
@@ -73,6 +74,11 @@ export const readPage = async (blobUrl: string): Promise<ExtractionResult> => {
     }
 
     const rawResult = await response.json();
+    
+    if (rawResult.tokensUsed) {
+      await trackTokenUsage(userId, rawResult.tokensUsed.totalTokens, 'extraction');
+    }
+
     return cleanAnalysis(rawResult);
 
   } catch (error) {
@@ -131,6 +137,11 @@ Text Pool: ${(data.ocrTexts || []).join('\n\n')}`;
 
     if (!response.ok) throw new Error(`Drafting failed: ${response.status}`);
     const data = await response.json();
+    
+    if (data.tokensUsed) {
+      await trackTokenUsage(userId, data.tokensUsed.totalTokens, 'drafting');
+    }
+
     return data.result || "The drafting partner encountered an error. Please try again.";
   } catch (error) {
     console.error("Draft generation error:", error);
@@ -170,6 +181,11 @@ export const refineDraft = async (
 
     if (!response.ok) throw new Error(`Refine failed: ${response.status}`);
     const data = await response.json();
+    
+    if (data.tokensUsed) {
+      await trackTokenUsage(userId, data.tokensUsed.totalTokens, 'drafting');
+    }
+
     return data.result || "The drafting partner encountered an error. Please try again.";
   } catch (error) {
     console.error("Refine Draft Error:", error);
@@ -183,6 +199,7 @@ export const refineDraft = async (
 export const convertToInteractive = async (
   studentContent: string,
   answerKey: string,
+  userId: string,
   activityType?: string,
   level?: string
 ): Promise<InteractiveData | null> => {
@@ -198,6 +215,11 @@ export const convertToInteractive = async (
     }
 
     const data = await response.json();
+    
+    if (data.tokensUsed) {
+      await trackTokenUsage(userId, data.tokensUsed.totalTokens, 'conversion');
+    }
+
     return data.result as InteractiveData;
   } catch (error) {
     console.error("Interactive conversion error:", error);
