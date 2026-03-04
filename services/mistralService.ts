@@ -1,4 +1,4 @@
-import { SourceMaterial, WorkbenchItem } from "../types";
+import { SourceMaterial, WorkbenchItem, InteractiveData } from "../types";
 
 export interface ExtractionResult {
   vocabulary?: { items: string[] };
@@ -174,5 +174,33 @@ export const refineDraft = async (
   } catch (error) {
     console.error("Refine Draft Error:", error);
     return "The drafting partner encountered an error. Please try again.";
+  }
+};
+
+/**
+ * Convert student content and answer key to interactive quiz JSON using Mistral via Netlify Function.
+ */
+export const convertToInteractive = async (
+  studentContent: string,
+  answerKey: string,
+  activityType?: string,
+  level?: string
+): Promise<InteractiveData | null> => {
+  try {
+    const response = await fetch('/.netlify/functions/ai-convert-interactive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentContent, answerKey, activityType, level })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Conversion failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.result as InteractiveData;
+  } catch (error) {
+    console.error("Interactive conversion error:", error);
+    return null;
   }
 };
