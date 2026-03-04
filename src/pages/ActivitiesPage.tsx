@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { getActivities, deleteActivity, updateActivity, createMagicLink, getMagicLinksForActivity } from '../services/firestoreService';
+import { convertToInteractive } from '../services/mistralService';
 import { SessionResultsModal } from '../components/modals/SessionResultsModal';
 import { ShareActivityModal } from '../components/modals/ShareActivityModal';
 import { ManageClassesModal } from '../components/modals/ManageClassesModal';
@@ -209,6 +210,17 @@ export const ActivitiesPage: React.FC = () => {
     if (!shareModalActivity || !user) return;
     setIsCreatingLink(true);
     try {
+      if (!shareModalActivity.interactiveData || !shareModalActivity.interactiveData.questions || shareModalActivity.interactiveData.questions.length === 0) {
+        const interactiveResult = await convertToInteractive(shareModalActivity.studentContent, shareModalActivity.answerKey || '');
+        if (interactiveResult && interactiveResult.questions && interactiveResult.questions.length > 0) {
+          await updateActivity(shareModalActivity.id, { interactiveData: interactiveResult });
+          setShareModalActivity(prev => prev ? { ...prev, interactiveData: interactiveResult } : prev);
+          setActivities(prev => prev.map(a => a.id === shareModalActivity.id ? { ...a, interactiveData: interactiveResult } : a));
+        } else {
+          toast.error("Interactive conversion failed.");
+        }
+      }
+
       const link = await createMagicLink(user.uid, shareModalActivity.id, {
         mode: 'test',
         collectName: true,
