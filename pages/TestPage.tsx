@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getMagicLink, getActivity, saveStudentResponse } from '../services/firestoreService';
@@ -35,7 +36,7 @@ export const TestPage: React.FC = () => {
   const [activity, setActivity] = useState<Activity | null>(null);
   const [teacherLogo, setTeacherLogo] = useState<string | null>(null);
   
-  const [step, setStep] = useState<'welcome' | 'activity' | 'results'>('welcome');
+  const [step, setStep] = useState<'welcome' | 'activity' | 'results' | 'finished'>('welcome');
   const [studentName, setStudentName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   
@@ -378,6 +379,29 @@ export const TestPage: React.FC = () => {
     </div>
   );
 
+  if (step === 'finished') {
+    return (
+      <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center p-6 text-center animate-in fade-in duration-500">
+        <div className="bg-white p-12 rounded-[48px] shadow-2xl max-w-sm w-full border border-gray-100 flex flex-col items-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-3 bg-gray-900" />
+          
+          <div className="mb-8">
+             {teacherLogo ? (
+               <div className="h-16 flex items-center justify-center">
+                 <img src={teacherLogo} alt="School Logo" className="h-full object-contain" />
+               </div>
+             ) : (
+               <Logo size="sm" layout="vertical" />
+             )}
+          </div>
+
+          <h2 className="text-2xl font-black uppercase mb-3 tracking-tight text-gray-900">Session Complete</h2>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest leading-relaxed">You may close this tab</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F9FAFB] font-sans pb-20">
       <div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 z-[150]">
@@ -385,7 +409,7 @@ export const TestPage: React.FC = () => {
       </div>
 
       <div className="fixed top-4 right-6 z-[160]">
-        <button onClick={() => step === 'activity' ? setShowExitModal(true) : navigate('/')} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-full shadow-lg hover:border-coral/40 transition-all active:scale-95 group">
+        <button onClick={() => step === 'activity' ? setShowExitModal(true) : setStep('finished')} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-full shadow-lg hover:border-coral/40 transition-all active:scale-95 group">
           <span className="text-[10px] font-black uppercase text-gray-400 group-hover:text-coral transition-colors">Exit Session</span>
           <X className="w-4 h-4 text-gray-300 group-hover:text-coral transition-colors" />
         </button>
@@ -574,7 +598,7 @@ export const TestPage: React.FC = () => {
               )}
 
               <div className="flex flex-col gap-4 max-w-sm mx-auto mt-8">
-                <button onClick={() => navigate('/')} className="w-full py-5 bg-coral text-white rounded-[28px] font-black text-sm uppercase tracking-widest shadow-2xl shadow-coral/30 hover:bg-[#DC2E4A] transition-all flex items-center justify-center gap-3 active:scale-95">Done & Exit Session <ArrowRight size={20} strokeWidth={3} /></button>
+                <button onClick={() => setStep('finished')} className="w-full py-5 bg-coral text-white rounded-[28px] font-black text-sm uppercase tracking-widest shadow-2xl shadow-coral/30 hover:bg-[#DC2E4A] transition-all flex items-center justify-center gap-3 active:scale-95">Done & Exit Session <ArrowRight size={20} strokeWidth={3} /></button>
               </div>
             </div>
           </div>
@@ -589,7 +613,7 @@ export const TestPage: React.FC = () => {
               <h3 className="text-xl font-black uppercase tracking-tight mb-3 text-gray-900">Discard Progress?</h3>
               <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed mb-10">Are you sure you want to exit? Your answers for this session will be lost.</p>
               <div className="flex flex-col gap-3">
-                <button onClick={() => navigate('/')} className="w-full py-4 bg-coral text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-coral/20 hover:bg-[#DC2E4A] transition-all">Yes, Exit Session</button>
+                <button onClick={() => { setShowExitModal(false); setStep('finished'); }} className="w-full py-4 bg-coral text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-coral/20 hover:bg-[#DC2E4A] transition-all">Yes, Exit Session</button>
                 <button onClick={() => setShowExitModal(false)} className="w-full py-4 bg-gray-50 text-gray-400 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-gray-100 transition-all">Cancel</button>
               </div>
             </div>
@@ -600,3 +624,5 @@ export const TestPage: React.FC = () => {
   );
 };
 
+
+     
