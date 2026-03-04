@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getMagicLink, getActivity, saveStudentResponse } from '../services/firestoreService';
@@ -21,6 +20,10 @@ import {
   ArrowDown,
   Edit
 } from 'lucide-react';
+
+const cleanMd = (text: string) => {
+  return text ? text.replace(/\*\*/g, '').replace(/[#~]/g, '').replace(/_{2,}/g, '__').trim() : '';
+};
 
 export const TestPage: React.FC = () => {
   const { id: magicLinkId } = useParams<{ id: string }>();
@@ -64,42 +67,62 @@ export const TestPage: React.FC = () => {
           return;
         }
         setMagicLink(link);
+        console.log('Magic link config:', link);
         
         // Fetch Teacher Profile for branding
         const teacherProfile = await getUserProfile(link.userId);
         if (teacherProfile?.schoolLogoURL) {
           setTeacherLogo(teacherProfile.schoolLogoURL);
         }
-        
-        const act = await getActivity(link.activityId);
-        if (!act) {
-          setError("Content missing.");
-          setLoading(false);
-          return;
-        }
-        setActivity(act);
-        setActivityTitle(act.title || 'Activity');
 
+        let currentActivity: Activity | null = null;
+        let questionsToUse: ActivityQuestion[] = [];
+        let wordBankToUse: string[] = [];
+        let instructionsToUse = 'Complete the activity below.';
+        let titleToUse = 'Activity';
+
+        // Check if link has content snapshot (new behavior)
         if (link.content && link.content.questions && link.content.questions.length > 0) {
-          setQuestions(link.content.questions);
-          setWordBank(link.content.wordBank || []);
-          setInstructions(link.content.instructions || 'Complete the activity below.');
-          setActivityTitle(link.content.title || act.title || 'Activity');
-        }
-        else if (act.interactiveData && act.interactiveData.questions && act.interactiveData.questions.length > 0) {
-          setQuestions(act.interactiveData.questions);
-          setWordBank(act.interactiveData.wordBank || []);
-          setInstructions(act.interactiveData.instructions || 'Complete the activity below.');
+          questionsToUse = link.content.questions;
+          wordBankToUse = link.content.wordBank || [];
+          instructionsToUse = link.content.instructions || instructionsToUse;
+          titleToUse = link.content.title || titleToUse;
+          
+          // If using snapshot, we skip fetching activity unless absolutely necessary.
+          // User requested: "Only fall back to fetching the activity ... if link.content is missing"
+          // So we do NOT fetch activity here.
+        } else {
+          // Fallback: Fetch activity
+          const act = await getActivity(link.activityId);
+          if (!act) {
+            setError("Content missing.");
+            setLoading(false);
+            return;
+          }
+          setActivity(act);
+          currentActivity = act;
+          titleToUse = act.title || 'Activity';
+
+          if (act.interactiveData && act.interactiveData.questions && act.interactiveData.questions.length > 0) {
+            questionsToUse = act.interactiveData.questions;
+            wordBankToUse = act.interactiveData.wordBank || [];
+            instructionsToUse = act.interactiveData.instructions || instructionsToUse;
+          }
+          
+          if (link.includeNotes && act.teacherNotes) {
+            setTeacherNotes(act.teacherNotes);
+            setShowNotesAndKey(prev => ({ ...prev, notes: true }));
+          }
+          if ((link.includeKey || link.showAnswers) && act.answerKey) {
+            setAnswerKey(act.answerKey);
+            setShowNotesAndKey(prev => ({ ...prev, key: true }));
+          }
         }
 
-        if (link.includeNotes && act.teacherNotes) {
-          setTeacherNotes(act.teacherNotes);
-          setShowNotesAndKey(prev => ({ ...prev, notes: true }));
-        }
-        if (link.includeKey && act.answerKey) {
-          setAnswerKey(act.answerKey);
-          setShowNotesAndKey(prev => ({ ...prev, key: true }));
-        }
+        setQuestions(questionsToUse);
+        setWordBank(wordBankToUse);
+        setInstructions(instructionsToUse);
+        setActivityTitle(titleToUse);
 
         if (!link.collectName) {
           setStep('activity');
@@ -133,6 +156,59 @@ export const TestPage: React.FC = () => {
   }, [questions]);
 
   const isAnswerCorrect = (qId: number): boolean => {
+    // 1. Try to use interactiveData from activity if available
+    // We prioritize this because link.content might have stripped answers or be stale
+    if (activity?.interactiveData?.questions) {
+        // Use loose equality or explicit conversion to ensure we match string/number IDs correctly
+        const q = activity.interactiveData.questions.find((q: any) => Number(q.id) === qId);
+        if (q) {
+            const studentAns = answers[qId];
+            
+            if (q.type === 'open-ended') {
+                return Boolean(studentAns && String(studentAns).trim().length > 0);
+            }
+
+            if (q.type === 'matching') {
+                 const pairs = q.pairs || [];
+                 if (pairs.length === 0) return false;
+                 const userMap = studentAns || {};
+                 return pairs.every((p: any) => userMap[p.left] === p.right);
+            }
+            
+             if (q.type === 'ordering') {
+                return JSON.stringify(studentAns) === JSON.stringify(q.correctAnswer);
+             }
+
+            // Multi-select or array comparison
+            if (Array.isArray(q.correctAnswer) && Array.isArray(studentAns)) {
+                 const sortedCorrect = [...q.correctAnswer].sort().map(s => String(s).toLowerCase().trim());
+                 const sortedStudent = [...studentAns].sort().map(s => String(s).toLowerCase().trim());
+                 return JSON.stringify(sortedCorrect) === JSON.stringify(sortedStudent);
+            }
+
+            if (q.correctAnswer) {
+                let correct = String(q.correctAnswer).toLowerCase().trim();
+                const student = String(studentAns || '').toLowerCase().trim();
+
+                // Safety net: If correctAnswer is a single letter (A-D) but student answer is text,
+                // try to map the letter to the option text.
+                if (correct.length === 1 && q.options && q.options.length > 0) {
+                    const letterMatch = correct.match(/^[a-d]$/); // already lowercased
+                    if (letterMatch) {
+                        const index = correct.charCodeAt(0) - 97; // a=0, b=1...
+                        if (index >= 0 && index < q.options.length) {
+                             correct = String(q.options[index]).toLowerCase().trim();
+                        }
+                    }
+                }
+
+                // Case-insensitive string comparison for multiple-choice / fill-blank
+                return student === correct;
+            }
+        }
+    }
+
+    // Fallback: Use the local 'questions' state (which might come from link.content or activity)
     const question = questions.find(q => q.id === qId);
     if (!question) return false;
 
@@ -156,8 +232,20 @@ export const TestPage: React.FC = () => {
     }
     
     if (!question.correctAnswer) return false;
-    const studentAnswer = String(answers[qId] || '').toLowerCase().trim();
-    const correctAnswer = String(question.correctAnswer).toLowerCase().trim();
+    let studentAnswer = String(answers[qId] || '').toLowerCase().trim();
+    let correctAnswer = String(question.correctAnswer).toLowerCase().trim();
+
+    // Same safety net for fallback questions
+    if (correctAnswer.length === 1 && question.options && question.options.length > 0) {
+        const letterMatch = correctAnswer.match(/^[a-d]$/);
+        if (letterMatch) {
+            const index = correctAnswer.charCodeAt(0) - 97;
+            if (index >= 0 && index < question.options.length) {
+                 correctAnswer = String(question.options[index]).toLowerCase().trim();
+            }
+        }
+    }
+
     return studentAnswer === correctAnswer;
   };
 
@@ -227,7 +315,7 @@ export const TestPage: React.FC = () => {
            const isPairWrong = checked && userAnswer[pair.left] && userAnswer[pair.left] !== pair.right;
            return (
              <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
-               <div className="flex-1 font-bold text-gray-700 text-sm">{pair.left}</div>
+               <div className="flex-1 font-bold text-gray-700 text-sm">{cleanMd(pair.left)}</div>
                <div className="hidden sm:block text-gray-300">→</div>
                <div className="flex-1 relative">
                  <select
@@ -241,7 +329,7 @@ export const TestPage: React.FC = () => {
                    }`}
                  >
                    <option value="">Select match...</option>
-                   {rightOptions.map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
+                   {rightOptions.map((opt, i) => <option key={i} value={opt}>{cleanMd(opt)}</option>)}
                  </select>
                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                </div>
@@ -262,7 +350,7 @@ export const TestPage: React.FC = () => {
                <button disabled={checked || idx === 0} onClick={() => moveOrderItem(q.id, idx, 'up')} className="p-1 hover:bg-gray-100 rounded text-gray-400 disabled:opacity-20"><ArrowUp size={14} /></button>
                <button disabled={checked || idx === currentList.length - 1} onClick={() => moveOrderItem(q.id, idx, 'down')} className="p-1 hover:bg-gray-100 rounded text-gray-400 disabled:opacity-20"><ArrowDown size={14} /></button>
             </div>
-            <div className="flex-1 text-sm font-bold text-gray-700">{item}</div>
+            <div className="flex-1 text-sm font-bold text-gray-700">{cleanMd(item)}</div>
             <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-[10px] font-black">{idx + 1}</div>
           </div>
         ))}
@@ -270,7 +358,7 @@ export const TestPage: React.FC = () => {
           <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Correct Order:</p>
              <ol className="list-decimal pl-5 space-y-1">
-               {(q.correctAnswer as string[] || []).map((ans, i) => <li key={i} className="text-xs font-bold text-success">{ans}</li>)}
+               {(q.correctAnswer as string[] || []).map((ans, i) => <li key={i} className="text-xs font-bold text-success">{cleanMd(ans)}</li>)}
              </ol>
           </div>
         )}
@@ -319,7 +407,7 @@ export const TestPage: React.FC = () => {
               )}
             </div>
 
-            <h1 className="text-3xl font-black uppercase mb-4 leading-tight tracking-tight text-gray-900">{activityTitle}</h1>
+            <h1 className="text-3xl font-black uppercase mb-4 leading-tight tracking-tight text-gray-900">{cleanMd(activityTitle)}</h1>
             <p className="text-sm text-gray-500 mb-8">{instructions}</p>
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-full mb-8">
               <Sparkles size={14} className="text-coral" />
@@ -346,7 +434,7 @@ export const TestPage: React.FC = () => {
                    {teacherLogo ? <img src={teacherLogo} className="w-6 h-6 object-contain filter invert brightness-0" /> : <BookOpen size={20} />}
                  </div>
                  <div>
-                    <h2 className="text-sm font-black uppercase text-gray-900 tracking-tight">{activityTitle}</h2>
+                    <h2 className="text-sm font-black uppercase text-gray-900 tracking-tight">{cleanMd(activityTitle)}</h2>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{studentName || 'Student Access'}</p>
                  </div>
               </div>
@@ -377,7 +465,7 @@ export const TestPage: React.FC = () => {
                        </span>
                        <div className="flex-1 pt-1.5">
                           <p className={`text-[16px] font-bold uppercase tracking-tight leading-relaxed transition-all duration-300 ${checked && !isOpenEnded ? (correct ? 'text-success/80' : 'text-coral/80') : 'text-gray-700'}`}>
-                            {q.question}
+                            {cleanMd(q.question)}
                           </p>
                        </div>
                     </div>
@@ -403,7 +491,7 @@ export const TestPage: React.FC = () => {
                           <div className="relative">
                             <select value={answers[q.id] || ''} onChange={e => { setAnswers(p => ({ ...p, [q.id]: e.target.value })); if (magicLink?.mode === 'practice') setCheckedAnswers(p => { const n = {...p}; delete n[q.id]; return n; }); setShowIncompleteWarning(false); }} disabled={magicLink?.mode === 'practice' && checked && correct} className={`appearance-none w-full h-14 px-6 bg-white border-2 rounded-2xl font-black text-[12px] uppercase tracking-widest outline-none transition-all cursor-pointer ${answers[q.id] ? 'border-coral/20 bg-coral/[0.02] text-coral' : 'border-gray-100 focus:border-coral'}`}>
                               <option value="">Choose answer...</option>
-                              {availableOptions.map((opt, idx) => <option key={idx} value={opt} className="text-gray-900">{opt}</option>)}
+                              {availableOptions.map((opt, idx) => <option key={idx} value={opt} className="text-gray-900">{cleanMd(opt)}</option>)}
                             </select>
                             <ChevronDown size={16} className={`absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${answers[q.id] ? 'text-coral' : 'text-gray-300'}`} />
                           </div>
@@ -511,3 +599,4 @@ export const TestPage: React.FC = () => {
     </div>
   );
 };
+
