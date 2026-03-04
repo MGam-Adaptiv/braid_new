@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { getActivities, deleteActivity, updateActivity, createMagicLink, getMagicLinksForActivity } from '../services/firestoreService';
+import { convertToInteractive } from '../services/mistralService';
 import { SessionResultsModal } from '../components/modals/SessionResultsModal';
 import { ShareActivityModal } from '../components/modals/ShareActivityModal';
 import { ManageClassesModal } from '../components/modals/ManageClassesModal';
@@ -10,17 +11,16 @@ import { Activity } from '../types';
 import { 
   Search, Trash2, Plus, Star, ArrowLeft, MoreVertical, 
   RefreshCw, Filter, FileText, ChevronDown, Calendar, 
-  Sparkles, PenTool, Edit3, Share2, BarChart2, Check, Flame, X
+  Sparkles, PenTool, Edit3, Share2, BarChart2, Check, Flame, X, Play
 } from 'lucide-react';
+import { DraftBadge } from '../components/DraftBadge';
 import toast from 'react-hot-toast';
 
 interface ActivityCardProps {
   activity: Activity;
   onEdit: () => void;
   onDelete: () => void;
-  onToggleFavorite?: () => void;
-  onViewShare?: () => void;
-  onViewResults?: () => void;
+  onViewShare: () => void;
   formatDate: (date: any) => string;
 }
 
@@ -29,7 +29,6 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   onEdit, 
   onDelete, 
   onViewShare,
-  onViewResults,
   formatDate 
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -50,54 +49,41 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
       onClick={onEdit}
       className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-xl hover:border-gray-300 transition-all cursor-pointer group flex flex-col h-full"
     >
-      {/* TOP ROW - BADGES */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1.5">
-          <span className="px-2 py-0.5 bg-gray-900 text-white text-[9px] font-black uppercase rounded-md">
-            {activity.activityType || activity.category || 'Mixed'}
-          </span>
-          <span className="px-2 py-0.5 bg-coral text-white text-[9px] font-black uppercase rounded-md">
+      {/* TOP ROW */}
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center gap-2">
+          <DraftBadge status={activity.status as 'draft' | 'approved'} />
+          <span className="px-2.5 py-1 bg-gray-100 text-gray-600 text-[9px] font-black uppercase rounded-md">
             {activity.level || 'B1'}
           </span>
         </div>
-        {activity.status === 'draft' ? (
-          <span className="px-2 py-0.5 bg-amber-100 text-amber-600 text-[9px] font-black uppercase rounded-md flex items-center gap-1">
-            <FileText size={10} /> Draft
-          </span>
-        ) : (
-          <span className="px-2 py-0.5 bg-green-100 text-green-600 text-[9px] font-black uppercase rounded-md flex items-center gap-1">
-            <Check size={10} /> Published
-          </span>
-        )}
       </div>
 
       {/* TITLE */}
-      <h3 className="font-black text-gray-900 text-base uppercase leading-tight mb-4 line-clamp-2 group-hover:text-coral transition-colors">
+      <h3 className="font-black text-gray-900 text-base uppercase leading-tight mb-1 line-clamp-2 group-hover:text-coral transition-colors">
         {activity.title}
       </h3>
       
-      {/* PUBLISHER TAGS */}
-      <div className="flex flex-wrap items-center gap-1.5 mb-3 mt-auto">
-        {activity.source?.publisher && (
-          <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold uppercase rounded-md">
-            {activity.source.publisher}
-          </span>
-        )}
-        {activity.source?.bookTitle && (
-          <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold uppercase rounded-md">
-            {activity.source.bookTitle}
-          </span>
-        )}
-      </div>
+      {/* SUBTITLE */}
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">
+        {activity.activityType || 'Mixed Activity'}
+      </p>
 
       {/* FOOTER */}
-      <div className="pt-4 border-t border-gray-100 flex justify-between items-center">
+      <div className="pt-4 border-t border-gray-100 flex justify-between items-center mt-auto">
         <div className="flex items-center gap-2 text-[9px] font-bold text-gray-400 uppercase">
           <Calendar size={12} />
           <span>{formatDate(activity.createdAt)}</span>
         </div>
         
         <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="px-4 py-2 bg-gray-900 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-black transition-all shadow-md flex items-center gap-1.5"
+          >
+            <Play size={10} /> Open
+          </button>
+          
           <div className="relative">
             <button 
               onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
@@ -106,20 +92,24 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
               <MoreVertical size={16} />
             </button>
             {isMenuOpen && (
-              <div ref={menuRef} className="absolute bottom-full right-0 mb-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-30">
-                {activity.status === 'draft' ? (
-                  <>
-                    <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-50 text-gray-700"><Edit3 size={14} /><span className="text-[10px] font-black uppercase">Edit Draft</span></button>
-                    <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); onDelete(); }} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-red-50 text-red-600"><Trash2 size={14} /><span className="text-[10px] font-black uppercase">Delete</span></button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); onViewShare?.(); }} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-50 text-gray-700"><Share2 size={14} /><span className="text-[10px] font-black uppercase">View & Share</span></button>
-                    <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); onViewResults?.(); }} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-50 text-gray-700"><BarChart2 size={14} /><span className="text-[10px] font-black uppercase">Results</span></button>
-                    <div className="h-px bg-gray-100 my-1"></div>
-                    <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); onDelete(); }} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-red-50 text-red-600"><Trash2 size={14} /><span className="text-[10px] font-black uppercase">Delete</span></button>
-                  </>
-                )}
+              <div 
+                ref={menuRef}
+                className="absolute bottom-full right-0 mb-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-30 animate-in fade-in zoom-in-95 origin-bottom-right"
+              >
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); onViewShare(); }}
+                  className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-50 text-gray-700 transition-colors"
+                >
+                  <Share2 size={14} />
+                  <span className="text-[10px] font-black uppercase">View & Share</span>
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                  className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-red-50 text-red-600 transition-colors"
+                >
+                  <Trash2 size={14} />
+                  <span className="text-[10px] font-black uppercase">Delete</span>
+                </button>
               </div>
             )}
           </div>
@@ -136,17 +126,13 @@ export const ActivitiesPage: React.FC = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // New Filter State
+  // Filters
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<string | null>(null);
+  const [filterLevel, setFilterLevel] = useState<string | null>(null);
+  const [filterPublisher, setFilterPublisher] = useState<string | null>(null);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<{
-    level?: string[];
-    publisher?: string[];
-    book?: string[];
-    labels?: string[];
-    favoritesOnly?: boolean;
-    topSources?: boolean;
-  }>({});
   
   const [activeTab, setActiveTab] = useState<'all' | 'drafts' | 'published'>('all');
   const [shareModalActivity, setShareModalActivity] = useState<Activity | null>(null);
@@ -177,16 +163,6 @@ export const ActivitiesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const toggleFilter = (type: string, value: string) => {
-    setFilters(prev => {
-      const current = prev[type as keyof typeof prev] as string[] || [];
-      const updated = current.includes(value)
-        ? current.filter(v => v !== value)
-        : [...current, value];
-      return { ...prev, [type]: updated };
-    });
   };
 
   const handleDelete = (id: string, title: string) => {
@@ -234,6 +210,17 @@ export const ActivitiesPage: React.FC = () => {
     if (!shareModalActivity || !user) return;
     setIsCreatingLink(true);
     try {
+      if (!shareModalActivity.interactiveData || !shareModalActivity.interactiveData.questions || shareModalActivity.interactiveData.questions.length === 0) {
+        const interactiveResult = await convertToInteractive(shareModalActivity.studentContent, shareModalActivity.answerKey || '');
+        if (interactiveResult && interactiveResult.questions && interactiveResult.questions.length > 0) {
+          await updateActivity(shareModalActivity.id, { interactiveData: interactiveResult });
+          setShareModalActivity(prev => prev ? { ...prev, interactiveData: interactiveResult } : prev);
+          setActivities(prev => prev.map(a => a.id === shareModalActivity.id ? { ...a, interactiveData: interactiveResult } : a));
+        } else {
+          toast.error("Interactive conversion failed.");
+        }
+      }
+
       const link = await createMagicLink(user.uid, shareModalActivity.id, {
         mode: 'test',
         collectName: true,
@@ -270,25 +257,18 @@ export const ActivitiesPage: React.FC = () => {
   const filteredActivities = useMemo(() => {
     return activities.filter(a => {
       const matchesSearch = !searchTerm || a.title.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesLevel = !filters.level?.length || filters.level.includes(a.level || '');
-      const matchesPublisher = !filters.publisher?.length || filters.publisher.includes(a.source?.publisher || '');
-      const matchesBook = !filters.book?.length || filters.book.includes(a.source?.bookTitle || '');
-      
-      const matchesLabels = !filters.labels?.length || 
-        filters.labels.some(l => (a.activityType || '').toUpperCase().includes(l.toUpperCase()) || (a.tags || []).includes(l));
-
-      const matchesFavorites = !filters.favoritesOnly || a.isFavorite;
-      const matchesTopSources = !filters.topSources || ((a.timesUsed || 0) >= 30);
-      
+      const matchesType = !filterType || a.activityType === filterType;
+      const matchesLevel = !filterLevel || a.level === filterLevel;
+      const matchesPublisher = !filterPublisher || a.source?.publisher === filterPublisher;
+      const matchesFavorites = !showFavoritesOnly || a.isFavorite;
       const matchesTab = 
         activeTab === 'all' ? true :
         activeTab === 'drafts' ? a.status === 'draft' :
         (a.status === 'approved' || a.status === 'published');
 
-      return matchesSearch && matchesLevel && matchesPublisher && matchesBook && matchesLabels && matchesFavorites && matchesTopSources && matchesTab;
+      return matchesSearch && matchesType && matchesLevel && matchesPublisher && matchesFavorites && matchesTab;
     });
-  }, [activities, searchTerm, filters, activeTab]);
+  }, [activities, searchTerm, filterType, filterLevel, filterPublisher, showFavoritesOnly, activeTab]);
 
   const sortedActivities = [...filteredActivities].sort((a, b) => {
     const timeA = a.createdAt ? (a.createdAt as any).seconds || new Date(a.createdAt).getTime() : 0;
@@ -296,22 +276,15 @@ export const ActivitiesPage: React.FC = () => {
     return timeB - timeA;
   });
 
-  const draftActivities = sortedActivities.filter(a => a.status === 'draft');
-  const publishedActivities = sortedActivities.filter(a => a.status !== 'draft');
-
   const clearFilters = () => {
     setSearchTerm('');
-    setFilters({});
+    setFilterType(null);
+    setFilterLevel(null);
+    setFilterPublisher(null);
+    setShowFavoritesOnly(false);
   };
 
-  const hasActiveFilters = 
-    searchTerm || 
-    (filters.level && filters.level.length > 0) || 
-    (filters.publisher && filters.publisher.length > 0) || 
-    (filters.book && filters.book.length > 0) || 
-    (filters.labels && filters.labels.length > 0) || 
-    filters.favoritesOnly ||
-    filters.topSources;
+  const hasActiveFilters = searchTerm || filterType || filterLevel || filterPublisher || showFavoritesOnly;
 
   if (loading && activities.length === 0) {
     return (
@@ -397,46 +370,15 @@ export const ActivitiesPage: React.FC = () => {
             {/* EXPANDED FILTERS */}
             {showFilters && (
               <div className="bg-white border border-gray-200 rounded-[24px] p-6 animate-in slide-in-from-top-2 duration-200 shadow-sm">
-                
-                {/* Favorites & Top Sources Toggle Row */}
-                <div className="mb-4 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setFilters(prev => ({ ...prev, favoritesOnly: !prev.favoritesOnly }))}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all border ${
-                      filters.favoritesOnly
-                        ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm'
-                        : 'bg-gray-100 text-gray-600 border-gray-100 hover:bg-gray-200'
-                    }`}
-                  >
-                    <Star size={14} fill={filters.favoritesOnly ? 'currentColor' : 'none'} />
-                    Favorites Only
-                  </button>
-                  
-                  <button
-                    onClick={() => setFilters(prev => ({ ...prev, topSources: !prev.topSources }))}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all border ${
-                      filters.topSources
-                        ? 'bg-orange-50 text-orange-600 border-orange-200 shadow-sm'
-                        : 'bg-gray-100 text-gray-600 border-gray-100 hover:bg-gray-200'
-                    }`}
-                  >
-                    <Flame size={14} />
-                    Top Sources
-                  </button>
-                </div>
-
-                {/* CEFR Level Row */}
                 <div className="mb-4">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">CEFR Level</p>
                   <div className="flex flex-wrap gap-2">
-                    {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((level: string) => (
+                    {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map(level => (
                       <button
                         key={level}
-                        onClick={() => toggleFilter('level', level)}
+                        onClick={() => setFilterLevel(filterLevel === level ? null : level)}
                         className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
-                          filters.level?.includes(level)
-                            ? 'bg-coral text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          filterLevel === level ? 'bg-coral text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
                         {level}
@@ -445,77 +387,12 @@ export const ActivitiesPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Publisher Row */}
-                {activities.some(a => a.source?.publisher) && (
-                  <div className="mb-4">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Publisher</p>
-                    <div className="flex flex-wrap gap-2">
-                      {[...new Set(activities.map(a => a.source?.publisher).filter((p): p is string => !!p))].map((publisher: string) => (
-                        <button
-                          key={publisher}
-                          onClick={() => toggleFilter('publisher', publisher)}
-                          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
-                            filters.publisher?.includes(publisher)
-                              ? 'bg-gray-900 text-white'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          {publisher}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Book Row */}
-                {activities.some(a => a.source?.bookTitle) && (
-                  <div className="mb-4">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Book</p>
-                    <div className="flex flex-wrap gap-2">
-                      {[...new Set(activities.map(a => a.source?.bookTitle).filter((b): b is string => !!b))].map((book: string) => (
-                        <button
-                          key={book}
-                          onClick={() => toggleFilter('book', book)}
-                          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
-                            filters.book?.includes(book)
-                              ? 'bg-gray-900 text-white'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          {book}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Labels Row - Dynamic from activity types */}
-                <div className="mb-4">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Labels</p>
-                  <div className="flex flex-wrap gap-2">
-                    {[...new Set(activities.map(a => a.activityType || a.category).filter((l): l is string => !!l))].map((label: string) => (
-                      <button
-                        key={label}
-                        onClick={() => toggleFilter('labels', label)}
-                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
-                          filters.labels?.includes(label)
-                            ? 'bg-gray-900 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Clear Filters */}
                 {hasActiveFilters && (
                   <button
                     onClick={clearFilters}
                     className="text-[10px] font-bold text-coral uppercase hover:underline flex items-center gap-1"
                   >
-                    <X size={12} /> Clear All Filters
+                    Clear All Filters
                   </button>
                 )}
               </div>
@@ -526,57 +403,38 @@ export const ActivitiesPage: React.FC = () => {
 
       {/* MAIN CONTENT */}
       <main className="max-w-7xl mx-auto px-6 py-8 lg:px-8">
-        {draftActivities.length === 0 && publishedActivities.length === 0 ? (
-          <div className="py-32 text-center">
-            <FileText size={32} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-400 font-bold uppercase text-xs">No activities found</p>
+        {sortedActivities.length === 0 ? (
+          <div className="py-32 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-[24px] flex items-center justify-center text-gray-300 mb-6">
+              <FileText size={32} />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-2">
+              No activities found
+            </h3>
+            <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest max-w-[280px] leading-relaxed">
+              {hasActiveFilters ? 'Try adjusting your search or filters.' : 'Get started by creating your first activity in the Studio.'}
+            </p>
+            {!hasActiveFilters && (
+              <button 
+                onClick={() => navigate('/app')}
+                className="mt-8 px-6 py-3 bg-coral text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-coral/20 hover:bg-[#DC2E4A] transition-all"
+              >
+                Go to Studio
+              </button>
+            )}
           </div>
         ) : (
-          <div className="space-y-12">
-            {draftActivities.length > 0 && (
-              <div>
-                <div className="flex items-center gap-3 mb-6">
-                  <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">Drafts</h2>
-                  <span className="px-2.5 py-1 bg-amber-100 text-amber-600 rounded-full text-[10px] font-bold">{draftActivities.length}</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {draftActivities.map(activity => (
-                    <ActivityCard 
-                      key={activity.id} 
-                      activity={activity} 
-                      onEdit={() => handleEdit(activity)} 
-                      onDelete={() => handleDelete(activity.id, activity.title)} 
-                      onToggleFavorite={() => handleToggleFavorite(activity)} 
-                      onViewShare={() => handleViewShare(activity)}
-                      onViewResults={() => handleViewResults(activity)}
-                      formatDate={formatDate} 
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-            {publishedActivities.length > 0 && (
-              <div>
-                <div className="flex items-center gap-3 mb-6">
-                  <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">Published</h2>
-                  <span className="px-2.5 py-1 bg-green-100 text-green-600 rounded-full text-[10px] font-bold">{publishedActivities.length}</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {publishedActivities.map(activity => (
-                    <ActivityCard 
-                      key={activity.id} 
-                      activity={activity} 
-                      onEdit={() => handleEdit(activity)} 
-                      onDelete={() => handleDelete(activity.id, activity.title)} 
-                      onToggleFavorite={() => handleToggleFavorite(activity)} 
-                      onViewShare={() => handleViewShare(activity)}
-                      onViewResults={() => handleViewResults(activity)}
-                      formatDate={formatDate} 
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sortedActivities.map(activity => (
+              <ActivityCard 
+                key={activity.id} 
+                activity={activity} 
+                onEdit={() => handleEdit(activity)}
+                onDelete={() => handleDelete(activity.id, activity.title)}
+                onViewShare={() => setShareModalActivity(activity)}
+                formatDate={formatDate}
+              />
+            ))}
           </div>
         )}
       </main>
