@@ -16,7 +16,7 @@ import {
 import toast from 'react-hot-toast';
 
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.4.530/build/pdf.worker.min.mjs`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs`;
 }
 
 const PUBLISHERS = [
