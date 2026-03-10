@@ -72,6 +72,7 @@ OUTPUT SCHEMA:
       "id": number,
       "type": "multiple-choice" | "fill-blank" | "true-false" | "matching" | "ordering" | "open-ended" | "multi-select",
       "question": "string (The question text, stripped of numbering like '1.')",
+      "context": "string" | null (The full sentence with ___ for fill-blank questions. null for other types.),
       "options": ["string"] (Array of choices for MC/Multi-select. Empty for others.),
       "correctAnswer": "string" | ["string"] | null (The correct answer(s). For matching, null.),
       "hint": "string" | null (Any parenthetical hint found in the text, e.g., '(verb)'),
@@ -83,7 +84,7 @@ OUTPUT SCHEMA:
 }
 
 RULES:
-1. STRIP MARKDOWN: Remove all bold (**), italic (*), and other markdown symbols from the text.
+1. STRIP MARKDOWN: Remove all bold (**), italic (*), and other markdown symbols from the text. Also strip HTML tags like <strong>, <em>, <p>, <br>, <li>, <ol>, <ul>, <h2>, <hr> etc. Output clean plain text only.
 2. DETECT TYPES: Infer the question type based on the content (e.g., if there are A/B/C options, it's multiple-choice).
 3. HINTS: If a question has a hint in parentheses like "The cat ___ (run) fast", extract "run" as the hint and remove it from the question text if it makes sense, or keep it if it's part of the sentence structure. Ideally, "The cat ___ fast" with hint "run".
 4. IGNORE EXTRAS: Ignore sections labeled "Bonus", "Extension", "Teacher Notes", or "Optional".
@@ -91,6 +92,26 @@ RULES:
 6. MATCHING: For matching questions, create 'pairs' in the question object.
 7. VALID JSON: Return ONLY the raw JSON object. No markdown code blocks, no introductory text.
 8. CRITICAL: The correctAnswer field MUST contain the actual answer text, NEVER an option letter. If options are ['an', 'a', 'the'] and the correct answer is 'an', set correctAnswer to 'an' NOT 'A' or 'A. an'. Strip all letter prefixes from options too — store only clean text like 'an' not 'A. an'.
+
+FILL-BLANK SPECIFIC RULES:
+9. When the content has numbered blanks like "He __ (1) __ do many things" or "(1) ___" or "Uncle Brian _____ make balloon flowers" or any blank lines within sentences, classify each blank as type "fill-blank".
+10. For fill-blank questions, set "question" to a short label like "Gap 1", "Gap 2" etc.
+11. Set the "context" field to the full sentence with ___ where the blank goes, so the student sees the surrounding text. Example: "He ___ do many things!"
+12. Set "correctAnswer" to the exact word or phrase from the answer key that fills that blank.
+13. If the content is a reading passage with numbered gaps, extract each gap as a separate fill-blank question with its sentence context.
+14. "options" should be an empty array for fill-blank unless there is a word bank, in which case populate the top-level "wordBank" array.
+15. If the answer key contains space-separated answers like "can can can can't can", map them positionally: 1st word to gap 1, 2nd to gap 2, etc.
+16. If the answer key has evidence notes in parentheses like "can (Evidence: ...)" or "can't (No mention of...)", extract only the answer word before the parenthesis.
+17. When the student content contains HTML like <li>Uncle Brian _____ make balloon flowers.</li>, strip the HTML and extract the sentence with the blank as the context.
+
+TRUE/FALSE SPECIFIC RULES:
+18. When the content asks students to determine if statements are true or false, classify as type "true-false".
+19. Set "options" to ["True", "False"] for true-false questions.
+20. Set "correctAnswer" to either "True" or "False".
+
+MIXED ACTIVITY RULES:
+21. A single worksheet may contain MIXED question types (e.g., Section A is multiple-choice, Section B is fill-blank). Handle each question individually with the correct type.
+22. Set "activityType" to "Mixed" when multiple question types appear in the same worksheet.
 `;
 
     const userPrompt = `
@@ -175,6 +196,16 @@ ${answerKey}
                 }
                 return cleanAns;
              });
+          }
+
+          // Post-processing: Strip HTML from context field
+          if (q.context && typeof q.context === 'string') {
+            q.context = q.context.replace(/<[^>]*>/g, '').trim();
+          }
+
+          // Post-processing: Strip HTML from question field
+          if (q.question && typeof q.question === 'string') {
+            q.question = q.question.replace(/<[^>]*>/g, '').trim();
           }
         });
       }
