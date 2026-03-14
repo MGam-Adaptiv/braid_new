@@ -76,7 +76,7 @@ export const readPage = async (blobUrl: string, userId: string): Promise<Extract
     const rawResult = await response.json();
     
     if (rawResult.tokensUsed) {
-      await trackTokenUsage(userId, rawResult.tokensUsed.totalTokens, 'extraction');
+      await trackTokenUsage(userId, rawResult.tokensUsed, 'extraction');
     }
 
     return cleanAnalysis(rawResult);
@@ -139,7 +139,7 @@ Text Pool: ${(data.ocrTexts || []).join('\n\n')}`;
     const data = await response.json();
     
     if (data.tokensUsed) {
-      await trackTokenUsage(userId, data.tokensUsed.totalTokens, 'drafting');
+      await trackTokenUsage(userId, data.tokensUsed, 'drafting');
     }
 
     return data.result || "The drafting partner encountered an error. Please try again.";
@@ -183,7 +183,7 @@ export const refineDraft = async (
     const data = await response.json();
     
     if (data.tokensUsed) {
-      await trackTokenUsage(userId, data.tokensUsed.totalTokens, 'drafting');
+      await trackTokenUsage(userId, data.tokensUsed, 'drafting');
     }
 
     return data.result || "The drafting partner encountered an error. Please try again.";
@@ -217,7 +217,7 @@ export const convertToInteractive = async (
     const data = await response.json();
     
     if (data.tokensUsed) {
-      await trackTokenUsage(userId, data.tokensUsed.totalTokens, 'conversion');
+      await trackTokenUsage(userId, data.tokensUsed, 'conversion');
     }
 
     return data.result as InteractiveData;
