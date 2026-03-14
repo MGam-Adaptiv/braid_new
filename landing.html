@@ -733,8 +733,8 @@
     <img src="braid-logo.svg" alt="BraidStudio">
   </a>
   <div class="nav-actions">
-    <a href="#" class="btn-ghost auth-link" data-path="/#/login">Sign In</a>
-    <a href="#" class="btn-signup auth-link" data-path="/#/signup">Sign Up</a>
+    <a href="#" class="btn-ghost auth-link" data-path="/app#/login">Sign In</a>
+    <a href="#" class="btn-signup auth-link" data-path="/app#/signup">Sign Up</a>
   </div>
 </nav>
 
@@ -798,13 +798,13 @@
       <span class="hero-tag-dot"></span>
       AI Powered Activity Design for ELT Teachers
     </div>
-    <h2>Stop Struggling.<br><span style="color:var(--coral);">Start Adapting.</span><br><span style="color:#1F2937;">More Teaching.</span></h2>
+    <h2>Stop Struggling.<br><span style="color:var(--coral);">Ditch Adapting.</span><br><span style="color:#1F2937;">Start Teaching.</span></h2>
     <p class="hero-sub">
       Upload any educational material and BraidStudio builds quizzes, discussions, gap fills, role plays and more. Built around your content, ready for your class.
     </p>
     <div class="hero-cta-row">
-      <a href="#" class="btn-hero-primary auth-link" data-path="/#/signup">Start Braiding</a>
-      <a href="#" class="btn-hero-ghost auth-link" data-path="/#/login">Sign In</a>
+      <a href="#" class="btn-hero-primary auth-link" data-path="/app#/signup">Start Braiding</a>
+      <a href="#" class="btn-hero-ghost auth-link" data-path="/app#/login">Sign In</a>
     </div>
     <div class="hero-chips">
       <span class="hero-chip">📝 Quiz</span>
@@ -922,7 +922,7 @@
 <section class="cta-section">
   <h2 class="reveal">Ready to Start Braiding?</h2>
   <p class="reveal rd1">Join teachers building better, more personal lessons every day.</p>
-  <a href="#" class="btn-cta-white reveal rd2 auth-link" data-path="/#/signup">Start Braiding</a>
+  <a href="#" class="btn-cta-white reveal rd2 auth-link" data-path="/app#/signup">Start Braiding</a>
 </section>
 
 <!-- ─── FOOTER ─── -->
@@ -933,6 +933,11 @@
 </footer>
 
 <script>
+  // If loaded with a hash route (e.g. after browser refresh on /#/dashboard), send to React app
+  if (window.location.hash && window.location.hash.startsWith('#/')) {
+    window.location.replace('/app' + window.location.hash);
+  }
+
   const io = new IntersectionObserver(
     entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
     { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
