@@ -19,11 +19,13 @@ export const ShareActivityModal: React.FC<ShareActivityModalProps> = ({
   onManageClasses
 }) => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'print' | 'interactive'>('interactive');
+  const NON_INTERACTIVE_TYPES = ['speaking', 'writing'];
+  const isNonInteractive = NON_INTERACTIVE_TYPES.includes((activity?.activityType || activity?.type || '').toLowerCase());
+  const [activeTab, setActiveTab] = useState<'print' | 'interactive'>(isNonInteractive ? 'print' : 'interactive');
   const [collectName, setCollectName] = useState(true);
   const [showResults, setShowResults] = useState(true);
   const [includeNotes, setIncludeNotes] = useState(false);
-  const [includeKey, setIncludeKey] = useState(false);
+  const [includeKey, setIncludeKey] = useState(true); // default ON — teachers expect the key when printing
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [classes, setClasses] = useState<ClassTag[]>([]);
   const [magicLinkUrl, setMagicLinkUrl] = useState<string | null>(null);
@@ -107,11 +109,28 @@ export const ShareActivityModal: React.FC<ShareActivityModalProps> = ({
             <button onClick={() => setActiveTab('print')} className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase flex items-center justify-center gap-2 ${activeTab === 'print' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>
               <FileText size={16} /> Export / Print
             </button>
-            <button onClick={() => setActiveTab('interactive')} className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase flex items-center justify-center gap-2 ${activeTab === 'interactive' ? 'bg-coral text-white' : 'text-gray-500'}`}>
+            <button
+              onClick={() => !isNonInteractive && setActiveTab('interactive')}
+              className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase flex items-center justify-center gap-2 transition-all ${
+                isNonInteractive
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : activeTab === 'interactive' ? 'bg-coral text-white' : 'text-gray-500'
+              }`}
+              title={isNonInteractive ? 'Speaking & Writing activities use print/digital worksheet only' : undefined}
+            >
               <Play size={16} /> Interactive Test
             </button>
           </div>
         </div>
+
+        {isNonInteractive && (
+          <div className="px-6 py-3 bg-blue-50 border-b border-blue-100 flex items-start gap-3">
+            <span className="text-blue-500 text-lg mt-0.5">💬</span>
+            <p className="text-[10px] font-bold text-blue-700 leading-relaxed uppercase tracking-wide">
+              Speaking & Writing activities are productive skills — they can be printed or shared as a digital worksheet. Interactive scoring is not applicable.
+            </p>
+          </div>
+        )}
 
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -212,7 +231,7 @@ export const ShareActivityModal: React.FC<ShareActivityModalProps> = ({
                           <div>${activity.teacherNotes}</div>
                         </div>
                       ` : ''}
-                      <h1>${activity.title}</h1>
+                      <h1>${(activity.title || '').replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*(.+?)\*/g,'$1').replace(/__(.+?)__/g,'$1').replace(/_(.+?)_/g,'$1').replace(/^#+\s*/gm,'').trim()}</h1>
                       <div class="content">${activity.studentContent || ''}</div>
                       ${includeKey && activity.answerKey ? `
                         <div class="answer-key">
