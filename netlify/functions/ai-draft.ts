@@ -71,16 +71,16 @@ Keep your tone warm, approachable, and respectful.
 CRITICAL: You MUST output in this EXACT structure with these EXACT markers:
 
 ---TITLE---
-[Activity title]
+[A SHORT, UNIQUE plain-text title — ABSOLUTELY NO markdown, asterisks, bold, or surrounding quotes. The title MUST name the SPECIFIC grammar point or vocabulary set being practised, e.g. "Modal Verbs Can & Can't — Abilities Interview" or "Unit 3 Food Vocabulary: Quantities Matching". Never use vague titles like "Speaking Activity" or "Grammar Practice". Each activity for the same book must have a distinctly different title.]
 
 ---TEACHER NOTES---
 [2-3 sentences explanation for the teacher only]
 
 ---STUDENT CONTENT---
-[The actual activity for students. Clean, direct instructions.]
+[The actual activity for students. Clean, direct instructions. No markdown formatting.]
 
 ---ANSWER KEY---
-[The solutions]
+[The solutions. For speaking/writing activities write: N/A — Speaking/Writing activity: sample model answers for teacher reference, then provide 3-4 model answers.]
 
 ---END---`,
         },
@@ -102,7 +102,8 @@ CRITICAL: You MUST output in this EXACT structure with these EXACT markers:
     const tokensUsed = {
       promptTokens: usage.promptTokens,
       completionTokens: usage.completionTokens,
-      totalTokens: usage.totalTokens || (usage.promptTokens + usage.completionTokens)
+      totalTokens: usage.totalTokens || (usage.promptTokens + usage.completionTokens),
+      model: 'mistral-medium-latest'
     };
 
     return {
@@ -122,3 +123,4 @@ CRITICAL: You MUST output in this EXACT structure with these EXACT markers:
 };
 
 export { handler };
+
