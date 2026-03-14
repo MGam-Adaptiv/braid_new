@@ -1,3 +1,5 @@
+
+
 export enum UserRole {
   ADMIN = 'admin',
   SCHOOL_OWNER = 'school_owner',
@@ -70,13 +72,28 @@ export interface Workspace {
   createdAt: number;
 }
 
+// Build Log — internal activity creation timeline
+export interface BuildLogEntry {
+  timestamp: number;
+  action: 'drafted' | 'enhanced' | 'refined' | 'saved' | 'published' | 'shared' | 'results';
+  detail: string;
+  actor: 'teacher' | 'ai';
+  meta?: {
+    activityType?: string;
+    bookTitle?: string;
+    enhancementType?: string;
+    classSize?: number;
+    avgScore?: number;
+  };
+}
+
 export interface Activity {
   id: string;
   userId: string;
   userEmail?: string;
   title: string;
   type: ActivityType | string;
-  category?: string; // New: Top-level category for filtering
+  category?: string;
   level: string;
   duration?: number;
   status: ActivityStatus | string;
@@ -86,6 +103,8 @@ export interface Activity {
   rawContent?: string;
   topic?: string;
   activityType?: string;
+  buildLog?: BuildLogEntry[];
+  enhancements?: string[]; // quick-access list for analytics e.g. ['simplify','add_scaffolding']
   source?: {
     publisher: string;
     bookTitle: string;
@@ -199,6 +218,7 @@ export interface WorkbenchItem {
   status: 'draft' | 'approved';
   sourceIds: string[];
   lastModified: number;
+  buildLog?: BuildLogEntry[];
 }
 
 export interface Material {
