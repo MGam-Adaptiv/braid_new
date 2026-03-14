@@ -98,6 +98,15 @@ export const SignUpPage: React.FC = () => {
         <p className="text-[#9CA3AF] text-[10px] sm:text-xs tracking-[0.2em] font-bold uppercase mt-4">
           BRAIDING TEACHER CREATIVITY WITH AI
         </p>
+        <a
+          href="/landing.html"
+          className="mt-4 inline-flex items-center gap-1.5 text-[11px] font-bold text-[#9CA3AF] hover:text-black transition-colors tracking-wide"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back to website
+        </a>
       </div>
 
       <div className="flex-1 sm:flex-none flex items-start sm:items-center justify-center px-0 sm:px-6 mb-12">
