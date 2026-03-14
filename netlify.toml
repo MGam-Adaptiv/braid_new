@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build && cp landing.html dist/landing.html"
+  command = "npm run build && cp landing.html dist/landing.html && cp 'BRAID-STUDIO-LOGO-EXPORTS-RGB-02 (4).svg' dist/braid-logo.svg"
   publish = "dist"
   functions = "netlify/functions"
 
