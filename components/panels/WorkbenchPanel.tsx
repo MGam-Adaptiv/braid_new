@@ -1,16 +1,48 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useStudio } from '../../context/StudioContext';
 import { useAuth } from '../../context/AuthContext';
 import { saveActivity, updateActivity } from '../../services/firestoreService';
+import { trackTokenUsage } from '../../services/tokenService';
+import { BuildLogEntry } from '../../types';
 
 import { marked } from 'marked';
-import { 
-  Check, RefreshCw, Wand2, Key, Printer, Edit3, 
-  Bold, Italic, List, Maximize2, Minimize2, Save, 
-  Info, SplitSquareHorizontal, Sparkles, FileText, ChevronDown
+import {
+  Check, RefreshCw, Wand2, Key, Printer, Edit3,
+  Bold, Italic, List, Maximize2, Minimize2, Save,
+  Info, SplitSquareHorizontal, Sparkles, FileText, ChevronDown,
+  Clock, Bot, User, ChevronUp, Scissors, TrendingUp, Layers, Zap, Users, Globe
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// --- ENHANCE OPTIONS ---
+const ENHANCE_OPTIONS = [
+  { key: 'simplify',           label: 'Simplify Content',       Icon: Scissors,    color: 'text-blue-600',   bg: 'hover:bg-blue-50' },
+  { key: 'increase_difficulty',label: 'Increase Difficulty',    Icon: TrendingUp,  color: 'text-orange-600', bg: 'hover:bg-orange-50' },
+  { key: 'add_scaffolding',    label: 'Add Scaffolding',        Icon: Layers,      color: 'text-purple-600', bg: 'hover:bg-purple-50' },
+  { key: 'add_lead_in',        label: 'Add Lead-In',            Icon: Zap,         color: 'text-green-600',  bg: 'hover:bg-green-50' },
+  { key: 'convert_pair_work',  label: 'Convert to Pair Work',   Icon: Users,       color: 'text-teal-600',   bg: 'hover:bg-teal-50' },
+  { key: 'localise_context',   label: 'Localise Context',       Icon: Globe,       color: 'text-amber-600',  bg: 'hover:bg-amber-50' },
+];
+
+// --- BUILD LOG HELPERS ---
+const BUILD_LOG_ICONS: Record<string, string> = {
+  drafted:   '🤖',
+  enhanced:  '✨',
+  refined:   '💬',
+  saved:     '💾',
+  published: '✅',
+  shared:    '🔗',
+  results:   '📊',
+};
+
+const formatLogTime = (ts: number) => {
+  const d = new Date(ts);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return isToday ? `Today ${timeStr}` : `${d.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${timeStr}`;
+};
 
 // --- HELPER: Parse Interactive Data from raw content ---
 const parseInteractiveData = (rawContent: string) => {
@@ -102,7 +134,17 @@ const parseActivityContent = (rawContent: string) => {
 
   // 2. Extract Metadata (Title/Type)
   const titleMatch = rawContent.match(/---TITLE---[\s\S]*?:?\s*([\s\S]*?)(?=---)/i);
-  if (titleMatch) title = titleMatch[1].replace(/<\/?[^>]+(>|$)/g, "").trim();
+  if (titleMatch) {
+    title = titleMatch[1]
+      .replace(/<\/?[^>]+(>|$)/g, '') // strip HTML
+      .replace(/\*\*(.+?)\*\*/g, '$1') // **bold**
+      .replace(/\*(.+?)\*/g, '$1')     // *italic*
+      .replace(/__(.+?)__/g, '$1')     // __bold__
+      .replace(/_(.+?)_/g, '$1')       // _italic_
+      .replace(/^#+\s*/gm, '')         // # headings
+      .replace(/`(.+?)`/g, '$1')       // `code`
+      .trim();
+  }
 
   const typeMatch = rawContent.match(/---TYPE:\s*([A-Z\s]+)---/i);
   if (typeMatch) type = typeMatch[1].trim();
@@ -302,6 +344,7 @@ export const WorkbenchPanel: React.FC = () => {
   const { user } = useAuth();
   const { workbench, updateWorkbench, setWorkbench, workflowStage, combinedExtraction, selectedDraftType } = useStudio();
   const location = useLocation();
+  const navigate = useNavigate();
   
   const [includeNotes, setIncludeNotes] = useState(true);
   const [includeKey, setIncludeKey] = useState(true);
@@ -311,25 +354,36 @@ export const WorkbenchPanel: React.FC = () => {
   const [showEnhanceMenu, setShowEnhanceMenu] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [pendingDiff, setPendingDiff] = useState<{original: string, new: string, summary: string} | null>(null);
+  const [pendingEnhancementType, setPendingEnhancementType] = useState<string | null>(null);
+  const [showBuildLog, setShowBuildLog] = useState(false);
   
   // Hydrate workbench from navigation state (editActivity)
   useEffect(() => {
     const state = location.state as { editActivity?: any };
     if (state?.editActivity) {
       const activity = state.editActivity;
-      // Convert Firestore Activity to Workbench Item
-      // Use 'as any' to allow extra properties like level, topic, source to be stored in workbench state
+      // Always build content with the stored activity.title so it displays correctly
+      const cleanTitle = (activity.title || 'Untitled Activity')
+        .replace(/\*\*(.+?)\*\*/g, '$1').replace(/\*(.+?)\*/g, '$1')
+        .replace(/__(.+?)__/g, '$1').replace(/_(.+?)_/g, '$1')
+        .replace(/^#+\s*/gm, '').replace(/`(.+?)`/g, '$1').trim();
+      let baseContent = activity.rawContent || '';
+      if (baseContent) {
+        // Replace whatever title is in rawContent with the canonical stored title
+        baseContent = baseContent.replace(/---TITLE---[\s\S]*?(?=---)/i, `---TITLE---\n${cleanTitle}\n\n`);
+      } else {
+        baseContent = `---TITLE---\n${cleanTitle}\n\n---TYPE: ${activity.type || 'Custom'}---\n\n---TEACHER NOTES---\n${activity.teacherNotes || ''}\n\n---STUDENT CONTENT---\n${activity.studentContent || ''}\n\n---ANSWER KEY---\n${activity.answerKey || ''}`;
+      }
       const workbenchItem: any = {
-        ...activity, // Spread all existing activity properties (level, topic, source, etc.)
+        ...activity,
         id: activity.id,
-        title: activity.title,
-        content: activity.rawContent || `---TITLE---\n${activity.title}\n\n---TYPE: ${activity.type || 'Custom'}---\n\n---TEACHER NOTES---\n${activity.teacherNotes || ''}\n\n---STUDENT CONTENT---\n${activity.studentContent || ''}\n\n---ANSWER KEY---\n${activity.answerKey || ''}`,
+        title: cleanTitle,
+        content: baseContent,
         status: activity.status as 'draft' | 'approved',
         sourceIds: [],
         lastModified: Date.now()
       };
       setWorkbench([workbenchItem]);
-      // Clear state to prevent loop
       window.history.replaceState({}, document.title);
     }
   }, [location, setWorkbench]);
@@ -351,32 +405,61 @@ export const WorkbenchPanel: React.FC = () => {
 
   const execCmd = (cmd: string) => document.execCommand(cmd, false);
 
-  const handleEnhance = async (instruction: string) => {
+  const handleEnhance = async (enhancementType: string) => {
     if (!activeItem || !parsed) return;
-    setIsEnhancing(true); setShowEnhanceMenu(false);
+    setIsEnhancing(true);
+    setShowEnhanceMenu(false);
+    setPendingEnhancementType(enhancementType);
     try {
-      const response = await fetch('/.netlify/functions/ai-draft', {
+      const item = activeItem as any;
+      const response = await fetch('/.netlify/functions/ai-enhance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `Act as an expert editor. REWRITE this content to ${instruction}. RETURN JSON: { "content": "the rewritten HTML string", "summary": "Bulleted list of changes made" }`,
-          sourceContext: parsed.studentContent,
-          workbenchContext: ''
+          enhancementType,
+          studentContent: parsed.studentContent,
+          activityType: item.activityType || selectedDraftType || parsed.type || 'mixed',
+          level: item.level || parsed.level || 'B1',
         })
       });
       const data = await response.json();
-      const text = data.result || '';
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { content: text, summary: 'Content updated.' };
-      setPendingDiff({ original: parsed.studentContent, new: result.content, summary: result.summary });
-    } catch (error) { toast.error("Enhance failed"); } finally { setIsEnhancing(false); }
+      if (data.error) throw new Error(data.error);
+      if (data.tokensUsed && user?.uid) {
+        await trackTokenUsage(user.uid, data.tokensUsed, 'enhance');
+      }
+      setPendingDiff({ original: parsed.studentContent, new: data.enhanced, summary: data.summary });
+    } catch (error) {
+      toast.error("Enhance failed");
+      setPendingEnhancementType(null);
+    } finally {
+      setIsEnhancing(false);
+    }
   };
 
   const applyEnhancement = () => {
     if (!pendingDiff || !activeItem || !parsed) return;
     const newContent = `---TITLE---\n${parsed.title}\n\n---TYPE: ${parsed.type}---\n\n---TEACHER NOTES---\n${parsed.teacherNotes}\n\n---STUDENT CONTENT---\n${pendingDiff.new}\n\n---ANSWER KEY---\n${parsed.answerKey}`;
-    updateWorkbench({ ...activeItem, content: newContent });
+
+    // Write Build Log entry
+    const existingLog: BuildLogEntry[] = (activeItem as any).buildLog || [];
+    const existingEnhancements: string[] = (activeItem as any).enhancements || [];
+    const newEntry: BuildLogEntry = {
+      timestamp: Date.now(),
+      action: 'enhanced',
+      detail: pendingDiff.summary || pendingEnhancementType || 'Enhancement applied',
+      actor: 'teacher',
+      meta: { enhancementType: pendingEnhancementType || undefined },
+    };
+
+    updateWorkbench({
+      ...activeItem,
+      content: newContent,
+      buildLog: [...existingLog, newEntry],
+      enhancements: [...new Set([...existingEnhancements, pendingEnhancementType || ''])].filter(Boolean),
+    } as any);
+
     setPendingDiff(null);
+    setPendingEnhancementType(null);
     toast.success("Changes Applied");
   };
 
@@ -387,6 +470,9 @@ export const WorkbenchPanel: React.FC = () => {
       const finalTitle = titleRef.current?.innerText || parsed.title;
       const item = activeItem as any; // Cast to access extended properties
 
+      // Use existing interactive data only — no auto-conversion on save
+      const interactiveData = parseInteractiveData(activeItem.content) || item.interactiveData || null;
+
       // IMPORTANT: Preserve existing metadata from activeItem
       const payload = {
         title: finalTitle,
@@ -395,13 +481,13 @@ export const WorkbenchPanel: React.FC = () => {
         studentContent: docRef.current?.innerHTML || item.studentContent || parsed.studentContent,
         answerKey: keyRef.current?.innerText || item.answerKey || parsed.answerKey,
         rawContent: activeItem.content || item.rawContent, // Prefer current content
-        
+
         // PRESERVE existing values first, fallback to extraction/parsing
         level: item.level || combinedExtraction?.level || parsed.level || 'B1',
         topic: item.topic || combinedExtraction?.topic || parsed.target || 'General',
         activityType: item.activityType || selectedDraftType || parsed.type || 'mixed',
         category: item.category || selectedDraftType || parsed.type || 'mixed',
-        
+
         // PRESERVE source information
         source: item.source || {
           publisher: combinedExtraction?.allTags?.publisher || '',
@@ -409,14 +495,26 @@ export const WorkbenchPanel: React.FC = () => {
           pages: [],
           pageCount: combinedExtraction?.pageCount || 0,
         },
-        
-        interactiveData: parseInteractiveData(activeItem.content) || item.interactiveData || null,
+
+        interactiveData,
 
         // Timestamps
         createdAt: item.createdAt || Date.now(),
         updatedAt: Date.now(),
         isFavorite: item.isFavorite || false,
         userId: user.uid,
+
+        // Build Log — append save/publish entry
+        buildLog: [
+          ...(item.buildLog || []),
+          {
+            timestamp: Date.now(),
+            action: targetStatus === 'approved' ? 'published' : 'saved',
+            detail: targetStatus === 'approved' ? 'Published' : 'Saved as Draft',
+            actor: 'teacher' as const,
+          }
+        ],
+        enhancements: item.enhancements || [],
       };
 
       if (activeItem.id.startsWith('w-')) {
@@ -430,34 +528,28 @@ export const WorkbenchPanel: React.FC = () => {
           updateWorkbench(updatedItem);
       }
 
-      // IMPROVED TOASTS
       if (targetStatus === 'draft') {
         toast.success('Draft saved to My Activities', {
-          duration: 3000,
-          style: {
-            background: '#FEF3C7',
-            color: '#92400E',
-            fontWeight: '600',
-          },
+          duration: 2000,
+          style: { background: '#FEF3C7', color: '#92400E', fontWeight: '600' },
           icon: '📝',
         });
       } else {
         toast.success('Activity published!', {
-          duration: 3000,
-          style: {
-            background: '#D1FAE5',
-            color: '#065F46',
-            fontWeight: '600',
-          },
+          duration: 2000,
+          style: { background: '#D1FAE5', color: '#065F46', fontWeight: '600' },
           icon: '🎉',
         });
       }
+      // Navigate to My Activities after a short delay so the toast is visible
+      // Keep isSaving=true until navigation to prevent double-save
+      setTimeout(() => navigate('/activities'), 1200);
+      return; // skip finally reset on success
 
-    } catch (e) { 
-        console.error(e); 
+    } catch (e) {
+        console.error(e);
         toast.error("Save failed");
-    } finally { 
-        setIsSaving(false); 
+        setIsSaving(false);
     }
   };
 
@@ -501,6 +593,24 @@ export const WorkbenchPanel: React.FC = () => {
     <div className={containerClass}>
       {/* 1. HEADER (Two Rows) */}
       <div className="bg-white border-b border-gray-200 shrink-0 shadow-sm z-[60]">
+        {/* BREADCRUMB */}
+        <div className="px-6 pt-2.5 pb-0 flex items-center gap-1.5">
+          <button
+            onClick={() => navigate('/activities')}
+            className="text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-coral transition-colors"
+          >
+            My Activities
+          </button>
+          <span className="text-[9px] text-gray-300 font-bold">›</span>
+          <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+            {combinedExtraction?.allTags?.bookTitle || (activeItem as any)?.source?.bookTitle || 'Studio'}
+          </span>
+          <span className="text-[9px] text-gray-300 font-bold">›</span>
+          <span className="text-[9px] font-black text-coral uppercase tracking-widest truncate max-w-[200px]">
+            {parsed?.title || 'Draft'}
+          </span>
+        </div>
+
         {/* ROW 1: Info */}
         <div className="px-6 py-3 flex items-center justify-between border-b border-gray-100">
           <div className="flex items-center gap-3">
@@ -524,10 +634,20 @@ export const WorkbenchPanel: React.FC = () => {
               {isEnhancing ? <RefreshCw className="animate-spin" size={14} /> : <Wand2 size={14} />} Enhance
             </button>
             {showEnhanceMenu && (
-              <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[70]">
-                <button onClick={() => handleEnhance("simplify vocabulary")} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-[11px] font-bold text-gray-700">Simplify Content</button>
-                <button onClick={() => handleEnhance("increase difficulty")} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-[11px] font-bold text-gray-700">Increase Difficulty</button>
-                <button onClick={() => handleEnhance("fix grammar")} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-[11px] font-bold text-gray-700">Fix Grammar</button>
+              <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[70]">
+                <div className="px-4 pt-3 pb-2 border-b border-gray-100">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Adapt This Activity</p>
+                </div>
+                {ENHANCE_OPTIONS.map(({ key, label, Icon, color, bg }) => (
+                  <button
+                    key={key}
+                    onClick={() => handleEnhance(key)}
+                    className={`w-full text-left px-4 py-3 ${bg} flex items-center gap-3 transition-colors`}
+                  >
+                    <Icon size={13} className={color} />
+                    <span className="text-[11px] font-bold text-gray-700">{label}</span>
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -572,15 +692,64 @@ export const WorkbenchPanel: React.FC = () => {
             isEditing={isEditing} 
           />
           
-          <AnswerKeySection 
-            parsed={parsed} 
-            contentRef={keyRef} 
-            isEditing={isEditing} 
-            includeKey={includeKey} 
-            setIncludeKey={setIncludeKey} 
+          <AnswerKeySection
+            parsed={parsed}
+            contentRef={keyRef}
+            isEditing={isEditing}
+            includeKey={includeKey}
+            setIncludeKey={setIncludeKey}
           />
 
-          <div className="h-20" /> 
+          {/* BUILD LOG */}
+          {(() => {
+            const log: BuildLogEntry[] = (activeItem as any)?.buildLog || [];
+            if (log.length === 0) return null;
+            return (
+              <div className="mx-6 mb-4 rounded-2xl border border-gray-100 overflow-hidden">
+                <button
+                  onClick={() => setShowBuildLog(v => !v)}
+                  className="w-full flex items-center justify-between px-5 py-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Clock size={13} className="text-gray-400" />
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Build Log</span>
+                    <span className="px-1.5 py-0.5 bg-gray-200 text-gray-500 text-[9px] font-black rounded-full">{log.length}</span>
+                  </div>
+                  {showBuildLog ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+                </button>
+                {showBuildLog && (
+                  <div className="px-5 py-4 bg-white space-y-3">
+                    {log.map((entry, i) => (
+                      <div key={i} className="flex items-start gap-3">
+                        <span className="text-base leading-none mt-0.5">{BUILD_LOG_ICONS[entry.action] || '•'}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-bold text-gray-800 leading-snug">{entry.detail}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[9px] text-gray-400 uppercase tracking-wider">{formatLogTime(entry.timestamp)}</span>
+                            {entry.actor === 'ai' && (
+                              <span className="flex items-center gap-0.5 text-[9px] text-indigo-400 font-bold uppercase">
+                                <Bot size={9} /> AI
+                              </span>
+                            )}
+                            {entry.actor === 'teacher' && (
+                              <span className="flex items-center gap-0.5 text-[9px] text-gray-400 font-bold uppercase">
+                                <User size={9} /> You
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {i < log.length - 1 && (
+                          <div className="absolute left-[28px] mt-6 w-px h-3 bg-gray-100" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="h-20" />
         </div>
       </>
 
@@ -598,19 +767,29 @@ export const WorkbenchPanel: React.FC = () => {
               </div>
             </div>
             <div className="flex-1 grid grid-cols-2 overflow-hidden">
-              <div className="p-8 overflow-y-auto border-r border-gray-200 bg-red-50/20 relative">
-                <span className="sticky top-0 inline-block px-3 py-1 bg-red-100 text-red-600 rounded text-[9px] font-black uppercase tracking-widest mb-6 border border-red-200 shadow-sm z-10">Original</span>
-                <div className="prose prose-sm text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: marked.parse(pendingDiff.original) }} />
+              {/* ORIGINAL PANEL */}
+              <div className="flex flex-col border-r border-gray-200 bg-red-50/20 overflow-hidden">
+                <div className="px-8 py-3 border-b border-red-100 bg-red-50 shrink-0">
+                  <span className="px-3 py-1 bg-red-100 text-red-600 rounded text-[9px] font-black uppercase tracking-widest border border-red-200">Original</span>
+                </div>
+                <div className="flex-1 overflow-y-auto p-8">
+                  <div className="prose prose-sm text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: marked.parse(pendingDiff.original) }} />
+                </div>
               </div>
-              <div className="p-8 overflow-y-auto bg-green-50/20 relative flex flex-col">
-                <span className="sticky top-0 inline-block px-3 py-1 bg-green-100 text-green-600 rounded text-[9px] font-black uppercase tracking-widest mb-6 border border-green-200 shadow-sm z-10">Enhanced</span>
-                <div className="prose prose-sm text-gray-900 leading-relaxed font-medium flex-1" dangerouslySetInnerHTML={{ __html: marked.parse(pendingDiff.new) }} />
-                {pendingDiff.summary && (
-                  <div className="mt-8 p-5 bg-white rounded-xl border border-green-200 shadow-lg animate-in slide-in-from-bottom-4">
-                    <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2 flex items-center gap-2"><Sparkles size={12}/> AI Change Log</p>
-                    <div className="prose prose-xs text-gray-600" dangerouslySetInnerHTML={{ __html: pendingDiff.summary }} />
-                  </div>
-                )}
+              {/* ENHANCED PANEL */}
+              <div className="flex flex-col bg-green-50/20 overflow-hidden">
+                <div className="px-8 py-3 border-b border-green-100 bg-green-50 shrink-0">
+                  <span className="px-3 py-1 bg-green-100 text-green-600 rounded text-[9px] font-black uppercase tracking-widest border border-green-200">Enhanced</span>
+                </div>
+                <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-6">
+                  <div className="prose prose-sm text-gray-900 leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: marked.parse(pendingDiff.new) }} />
+                  {pendingDiff.summary && (
+                    <div className="p-5 bg-white rounded-xl border border-green-200 shadow-lg shrink-0">
+                      <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2 flex items-center gap-2"><Sparkles size={12}/> AI Change Log</p>
+                      <div className="prose prose-xs text-gray-600" dangerouslySetInnerHTML={{ __html: pendingDiff.summary }} />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
