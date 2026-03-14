@@ -43,7 +43,7 @@ interface StudioContextType {
   uploadNewPage: (pageData: Partial<PageSource>) => Promise<PageSource>;
   combinedExtraction: CombinedContent | null;
   setCombinedExtraction: (content: CombinedContent | null) => void;
-  
+
   // Drafting Partner State
   partnerInput: string;
   setPartnerInput: (input: string) => void;
@@ -51,6 +51,7 @@ interface StudioContextType {
   isGenerating: boolean;
   handleGenerateDraft: (type?: string) => Promise<void>;
   sendDraftToWorkbench: () => void;
+  currentDraftId: string | null;
   selectedDraftType: string;
   isRefining: boolean;
   handleRefineDraft: (refinementRequest: string) => Promise<void>;
@@ -82,6 +83,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [activityConfig, setActivityConfig] = useState<{ questionCount: number; questionFormat: string }>({ questionCount: 10, questionFormat: 'mixed' });
   const [pendingDraftType, setPendingDraftType] = useState<string | null>(null);
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
 
   const addToWorkbench = (item: WorkbenchItem) => {
     setWorkbench(prev => [item, ...prev]);
@@ -102,11 +104,47 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return await uploadPage(user.uid, pageData);
   };
 
+  // Strip markdown formatting from titles (e.g. **"Title"** → Title)
+  const stripMarkdown = (text: string): string =>
+    text
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/__(.+?)__/g, '$1')
+      .replace(/_(.+?)_/g, '$1')
+      .replace(/^#+\s*/gm, '')
+      .replace(/`(.+?)`/g, '$1')
+      .trim();
+
+  const buildWorkbenchItem = (id: string, rawContent: string): WorkbenchItem => {
+    const titleMatch = rawContent.match(/---TITLE---\s*([\s\S]*?)(?=---)/i);
+    const rawTitle = titleMatch ? titleMatch[1].trim() : 'Draft Activity';
+    const typeMatch = rawContent.match(/---TYPE:\s*([A-Z\s]+)---/i);
+    const actType = typeMatch ? typeMatch[1].trim() : '';
+    const bookMatch = sources[0]?.title || '';
+    return {
+      id,
+      title: stripMarkdown(rawTitle),
+      content: rawContent,
+      status: 'draft',
+      sourceIds: [],
+      lastModified: Date.now(),
+      buildLog: [{
+        timestamp: Date.now(),
+        action: 'drafted' as const,
+        detail: `Draft created by AI Partner${actType ? ` · ${actType}` : ''}${bookMatch ? ` · ${bookMatch}` : ''}`,
+        actor: 'ai' as const,
+      }],
+    };
+  };
+
   const handleGenerateDraft = async (type: string = 'Custom') => {
     if (!user || (!partnerInput.trim() && type === 'Custom') || isGenerating || sources.length === 0) return;
-    
-    setSelectedDraftType(type); // Store the selected type
+
+    setSelectedDraftType(type);
     setIsGenerating(true);
+    // Reset so the panel shows the ADD TO WORKBENCH button for the new draft
+    setCurrentDraftId(null);
+    setDraftContent(null);
     try {
       const result = await draftResponse(type, partnerInput, sources, workbench, user.uid, user.email, activityConfig);
       setDraftContent(result);
@@ -121,14 +159,21 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const handleRefineDraft = async (refinementRequest: string) => {
     if (!user || !draftContent || !refinementRequest.trim() || isRefining) return;
-    
+
     setIsRefining(true);
     try {
       const result = await refineDraft(draftContent, refinementRequest, sources, user.uid, user.email);
       setDraftContent(result);
       addMessage({ id: Date.now().toString(), role: 'partner', text: result, timestamp: Date.now() });
       setPartnerInput('');
-      toast.success("Draft updated!");
+
+      // If already sent to workbench, auto-update the existing item with the refined content
+      if (currentDraftId) {
+        updateWorkbench(buildWorkbenchItem(currentDraftId, result));
+        toast.success("Workbench updated!");
+      } else {
+        toast.success("Draft refined — send it to the Workbench when ready.");
+      }
     } catch (error) {
       toast.error("Failed to refine draft.");
     } finally {
@@ -138,17 +183,17 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const sendDraftToWorkbench = () => {
     if (!draftContent) return;
-    const titleMatch = draftContent.match(/---TITLE---\s*([\s\S]*?)(?=---)/i);
-    addToWorkbench({ 
-      id: 'w-' + Math.random().toString(36).substr(2, 9), 
-      title: titleMatch ? titleMatch[1].trim() : 'Draft Activity', 
-      content: draftContent, 
-      status: 'draft', 
-      sourceIds: [], 
-      lastModified: Date.now() 
-    });
-    setDraftContent(null);
-    toast.success("Added to Workbench!");
+    if (currentDraftId) {
+      // Already sent — clear the preview panel ready for a new draft
+      setDraftContent(null);
+      setCurrentDraftId(null);
+      return;
+    }
+    // First send — add to workbench
+    const newId = 'w-' + Math.random().toString(36).substr(2, 9);
+    setCurrentDraftId(newId);
+    addToWorkbench(buildWorkbenchItem(newId, draftContent));
+    toast.success("Activity added to Workbench!");
   };
 
   return (
@@ -175,6 +220,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       isGenerating,
       handleGenerateDraft,
       sendDraftToWorkbench,
+      currentDraftId,
       selectedDraftType,
       isRefining,
       handleRefineDraft,
