@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "npm run build && cp landing.html dist/landing.html"
   publish = "dist"
   functions = "netlify/functions"
 
