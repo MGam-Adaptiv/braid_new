@@ -300,16 +300,24 @@ export const createMagicLink = async (
 ) => {
   try {
     const activity = await getActivity(activityId);
-    let contentSnapshot = null;
-    if (activity?.interactiveData) {
-      contentSnapshot = {
-        title: activity.title,
-        instructions: activity.interactiveData.instructions,
-        questions: activity.interactiveData.questions,
-        wordBank: activity.interactiveData.wordBank || [],
-        totalQuestions: activity.interactiveData.questions.length
-      };
-    }
+    if (!activity) throw new Error('Activity not found');
+
+    // Always snapshot the activity content into the magic link document.
+    // This means the TestPage never needs to read from /activities directly,
+    // allowing us to restrict that collection to signed-in users only.
+    const contentSnapshot = {
+      title: activity.title,
+      activityType: activity.activityType || activity.category || 'mixed',
+      level: activity.level || 'B1',
+      studentContent: activity.studentContent || '',
+      teacherNotes: config.includeNotes ? (activity.teacherNotes || '') : null,
+      answerKey: config.includeKey ? (activity.answerKey || '') : null,
+      // Interactive fields (null for print-only activities)
+      instructions: activity.interactiveData?.instructions || '',
+      questions: activity.interactiveData?.questions || [],
+      wordBank: activity.interactiveData?.wordBank || [],
+      totalQuestions: activity.interactiveData?.questions?.length || 0,
+    };
 
     const linkPayload = {
       activityId,
