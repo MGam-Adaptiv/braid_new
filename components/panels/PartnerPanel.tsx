@@ -7,13 +7,14 @@ import {
 import { marked } from 'marked';
 
 export const PartnerPanel: React.FC = () => {
-  const { 
-    partnerInput, 
-    setPartnerInput, 
-    handleGenerateDraft, 
-    isGenerating, 
+  const {
+    partnerInput,
+    setPartnerInput,
+    handleGenerateDraft,
+    isGenerating,
     draftContent,
     sendDraftToWorkbench,
+    currentDraftId,
     sources,
     workbench,
     isRefining,
@@ -135,14 +136,28 @@ export const PartnerPanel: React.FC = () => {
                 </button>
               </div>
 
-              {/* ACTION FOOTER - TO WORKBENCH BUTTON */}
+              {/* ACTION FOOTER */}
               <div className="p-2 bg-gray-50 border-t border-gray-100">
-                 <button 
-                   onClick={sendDraftToWorkbench}
-                   className="w-full py-4 bg-coral text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#DC2E4A] transition-all shadow-lg shadow-coral/20 flex items-center justify-center gap-2 active:scale-[0.99]"
-                 >
-                   <Plus size={14} strokeWidth={3} /> ADD TO WORKBENCH
-                 </button>
+                {currentDraftId ? (
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-[10px] font-black text-success uppercase tracking-widest flex items-center gap-1.5">
+                      <Check size={12} strokeWidth={3} /> In Workbench
+                    </span>
+                    <button
+                      onClick={sendDraftToWorkbench}
+                      className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={sendDraftToWorkbench}
+                    className="w-full py-4 bg-coral text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#DC2E4A] transition-all shadow-lg shadow-coral/20 flex items-center justify-center gap-2 active:scale-[0.99]"
+                  >
+                    <Plus size={14} strokeWidth={3} /> ADD TO WORKBENCH
+                  </button>
+                )}
               </div>
             </div>
             <div ref={chatEndRef} />
@@ -292,14 +307,12 @@ export const PartnerPanel: React.FC = () => {
                   if (pendingDraftType) {
                     handleGenerateDraft(pendingDraftType);
                     setPendingDraftType(null);
-                  } else {
-                    sendDraftToWorkbench();
                   }
                   setShowConfigModal(false);
                 }}
                 className="flex-1 py-3 bg-coral text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#DC2E4A] transition-all shadow-lg shadow-coral/20"
               >
-                {pendingDraftType ? 'Generate Activity' : 'Add to Workbench'}
+                Generate Activity
               </button>
             </div>
           </div>
