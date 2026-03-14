@@ -6,13 +6,106 @@ import { getActivities, deleteActivity, updateActivity, createMagicLink, getMagi
 import { SessionResultsModal } from '../components/modals/SessionResultsModal';
 import { ShareActivityModal } from '../components/modals/ShareActivityModal';
 import { ManageClassesModal } from '../components/modals/ManageClassesModal';
-import { Activity } from '../types';
-import { 
-  Search, Trash2, Plus, Star, ArrowLeft, MoreVertical, 
-  RefreshCw, Filter, FileText, ChevronDown, Calendar, 
-  Sparkles, PenTool, Edit3, Share2, BarChart2, Check, Flame, X
+import { Activity, BuildLogEntry } from '../types';
+import {
+  Search, Trash2, Plus, Star, ArrowLeft, MoreVertical,
+  RefreshCw, Filter, FileText, ChevronDown, Calendar,
+  Sparkles, PenTool, Edit3, Share2, BarChart2, Check, Flame, X,
+  Printer, Play, Clock, Bot, User, Wand2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// Strip markdown formatting from titles
+const stripMarkdown = (text: string): string =>
+  (text || '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    .replace(/_(.+?)_/g, '$1')
+    .replace(/^#+\s*/gm, '')
+    .replace(/`(.+?)`/g, '$1')
+    .trim();
+
+// --- BUILD LOG MODAL ---
+const BUILD_LOG_ICONS: Record<string, string> = {
+  drafted: '🤖', enhanced: '✨', refined: '💬',
+  saved: '💾', published: '✅', shared: '🔗', results: '📊',
+};
+
+const formatLogTime = (ts: number) => {
+  const d = new Date(ts);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return isToday ? `Today ${timeStr}` : `${d.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${timeStr}`;
+};
+
+const ENHANCEMENT_LABELS: Record<string, string> = {
+  simplify: 'Simplified content',
+  increase_difficulty: 'Increased difficulty',
+  add_scaffolding: 'Added scaffolding (word banks / sentence starters)',
+  add_lead_in: 'Added lead-in / warmer task',
+  convert_pair_work: 'Converted to pair work',
+  localise_context: 'Localised context and references',
+};
+
+const BuildLogModal: React.FC<{ activity: Activity; onClose: () => void }> = ({ activity, onClose }) => {
+  const stored: BuildLogEntry[] = (activity as any).buildLog || [];
+  // For pre-existing activities with enhancements but no log, synthesise entries
+  const enhancements: string[] = (activity as any).enhancements || [];
+  const log: BuildLogEntry[] = stored.length > 0 ? stored : enhancements.map(e => ({
+    timestamp: (activity as any).updatedAt || activity.createdAt,
+    action: 'enhanced' as const,
+    detail: ENHANCEMENT_LABELS[e] || e,
+    actor: 'teacher' as const,
+    meta: { enhancementType: e },
+  }));
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <Clock size={16} className="text-gray-400" />
+            <h2 className="font-black text-sm uppercase tracking-widest text-gray-900">Build Log</h2>
+          </div>
+          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 transition-colors"><X size={18} /></button>
+        </div>
+        <div className="px-2 py-1 bg-gray-50 border-b">
+          <p className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase truncate">{stripMarkdown(activity.title)}</p>
+        </div>
+        <div className="px-6 py-5 max-h-[60vh] overflow-y-auto">
+          {log.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">No build history yet.</p>
+          ) : (
+            <div className="space-y-4">
+              {log.map((entry, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <span className="text-lg leading-none mt-0.5 flex-shrink-0">{BUILD_LOG_ICONS[entry.action] || '•'}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-bold text-gray-800 leading-snug">{entry.detail}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[9px] text-gray-400 uppercase tracking-wider">{formatLogTime(entry.timestamp)}</span>
+                      {entry.actor === 'ai' && (
+                        <span className="flex items-center gap-0.5 text-[9px] text-indigo-400 font-black uppercase tracking-wider">
+                          <Bot size={9} /> AI Partner
+                        </span>
+                      )}
+                      {entry.actor === 'teacher' && (
+                        <span className="flex items-center gap-0.5 text-[9px] text-gray-400 font-black uppercase tracking-wider">
+                          <User size={9} /> You
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface ActivityCardProps {
   activity: Activity;
@@ -21,19 +114,31 @@ interface ActivityCardProps {
   onToggleFavorite?: () => void;
   onViewShare?: () => void;
   onViewResults?: () => void;
+  onViewHistory?: () => void;
   formatDate: (date: any) => string;
 }
 
-const ActivityCard: React.FC<ActivityCardProps> = ({ 
-  activity, 
-  onEdit, 
-  onDelete, 
+const NON_INTERACTIVE_TYPES = ['speaking', 'writing'];
+
+const getShareBadge = (activity: Activity) => {
+  const hasQuestions = (activity.interactiveData?.questions?.length || 0) > 0;
+  const isNonInteractive = NON_INTERACTIVE_TYPES.includes((activity.activityType || activity.category || '').toLowerCase());
+  if (hasQuestions && !isNonInteractive) return 'both';
+  return 'print';
+};
+
+const ActivityCard: React.FC<ActivityCardProps> = ({
+  activity,
+  onEdit,
+  onDelete,
   onViewShare,
   onViewResults,
-  formatDate 
+  onViewHistory,
+  formatDate
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
+  const shareBadge = getShareBadge(activity);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -73,7 +178,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
 
       {/* TITLE */}
       <h3 className="font-black text-gray-900 text-base uppercase leading-tight mb-4 line-clamp-2 group-hover:text-coral transition-colors">
-        {activity.title}
+        {stripMarkdown(activity.title)}
       </h3>
       
       {/* PUBLISHER TAGS */}
@@ -86,6 +191,23 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
         {activity.source?.bookTitle && (
           <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold uppercase rounded-md">
             {activity.source.bookTitle}
+          </span>
+        )}
+      </div>
+
+      {/* SHARE MODE + ADAPTED BADGES */}
+      <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+        <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-black uppercase rounded-md flex items-center gap-1">
+          <Printer size={9} /> Print
+        </span>
+        {shareBadge === 'both' && (
+          <span className="px-2 py-0.5 bg-coral/10 text-coral text-[9px] font-black uppercase rounded-md flex items-center gap-1">
+            <Play size={9} /> Interactive
+          </span>
+        )}
+        {((activity as any).enhancements?.length > 0) && (
+          <span className="px-2 py-0.5 bg-indigo-50 text-indigo-500 text-[9px] font-black uppercase rounded-md flex items-center gap-1">
+            <Wand2 size={9} /> Adapted
           </span>
         )}
       </div>
@@ -110,12 +232,14 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
                 {activity.status === 'draft' ? (
                   <>
                     <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-50 text-gray-700"><Edit3 size={14} /><span className="text-[10px] font-black uppercase">Edit Draft</span></button>
+                    <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); onViewHistory?.(); }} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-indigo-50 text-indigo-600"><Clock size={14} /><span className="text-[10px] font-black uppercase">View History</span></button>
                     <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); onDelete(); }} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-red-50 text-red-600"><Trash2 size={14} /><span className="text-[10px] font-black uppercase">Delete</span></button>
                   </>
                 ) : (
                   <>
                     <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); onViewShare?.(); }} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-50 text-gray-700"><Share2 size={14} /><span className="text-[10px] font-black uppercase">View & Share</span></button>
                     <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); onViewResults?.(); }} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-50 text-gray-700"><BarChart2 size={14} /><span className="text-[10px] font-black uppercase">Results</span></button>
+                    <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); onViewHistory?.(); }} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-indigo-50 text-indigo-600"><Clock size={14} /><span className="text-[10px] font-black uppercase">View History</span></button>
                     <div className="h-px bg-gray-100 my-1"></div>
                     <button onClick={(e) => { e.stopPropagation(); setIsMenuOpen(false); onDelete(); }} className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-red-50 text-red-600"><Trash2 size={14} /><span className="text-[10px] font-black uppercase">Delete</span></button>
                   </>
@@ -150,8 +274,19 @@ export const ActivitiesPage: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<'all' | 'drafts' | 'published'>('all');
   const [shareModalActivity, setShareModalActivity] = useState<Activity | null>(null);
+  const [historyActivity, setHistoryActivity] = useState<Activity | null>(null);
   const [showManageClasses, setShowManageClasses] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{id: string, title: string} | null>(null);
+  const [expandedBooks, setExpandedBooks] = useState<Set<string>>(new Set());
+
+  const toggleBook = (bookTitle: string) => {
+    setExpandedBooks(prev => {
+      const next = new Set(prev);
+      if (next.has(bookTitle)) next.delete(bookTitle);
+      else next.add(bookTitle);
+      return next;
+    });
+  };
 
   const [resultsModalActivity, setResultsModalActivity] = useState<Activity | null>(null);
   const [magicLinkUrl, setMagicLinkUrl] = useState<string | null>(null);
@@ -294,6 +429,22 @@ export const ActivitiesPage: React.FC = () => {
 
   const draftActivities = sortedActivities.filter(a => a.status === 'draft');
   const publishedActivities = sortedActivities.filter(a => a.status !== 'draft');
+
+  // Group published activities by book title for organised display
+  const publishedByBook = useMemo(() => {
+    const groups: Record<string, typeof publishedActivities> = {};
+    publishedActivities.forEach(a => {
+      const bookKey = a.source?.bookTitle || 'Custom / No Book';
+      if (!groups[bookKey]) groups[bookKey] = [];
+      groups[bookKey].push(a);
+    });
+    // Sort groups: books with most activities first, then Custom last
+    return Object.entries(groups).sort(([keyA, listA], [keyB, listB]) => {
+      if (keyA === 'Custom / No Book') return 1;
+      if (keyB === 'Custom / No Book') return -1;
+      return listB.length - listA.length;
+    });
+  }, [publishedActivities]);
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -545,31 +696,112 @@ export const ActivitiesPage: React.FC = () => {
                       onToggleFavorite={() => handleToggleFavorite(activity)} 
                       onViewShare={() => handleViewShare(activity)}
                       onViewResults={() => setResultsModalActivity(activity)}
-                      formatDate={formatDate} 
+                      onViewHistory={() => setHistoryActivity(activity)}
+                      formatDate={formatDate}
                     />
                   ))}
                 </div>
               </div>
             )}
-            {publishedActivities.length > 0 && (
+            {publishedByBook.length > 0 && (
               <div>
-                <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center gap-3 mb-5">
                   <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">Published</h2>
                   <span className="px-2.5 py-1 bg-green-100 text-green-600 rounded-full text-[10px] font-bold">{publishedActivities.length}</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {publishedActivities.map(activity => (
-                    <ActivityCard 
-                      key={activity.id} 
-                      activity={activity} 
-                      onEdit={() => handleEdit(activity)} 
-                      onDelete={() => handleDelete(activity.id, activity.title)} 
-                      onToggleFavorite={() => handleToggleFavorite(activity)} 
-                      onViewShare={() => handleViewShare(activity)}
-                      onViewResults={() => setResultsModalActivity(activity)}
-                      formatDate={formatDate} 
-                    />
-                  ))}
+
+                {/* Grid: collapsed stacks sit side-by-side; expanded ones span all columns */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {publishedByBook.map(([bookTitle, bookActivities]) => {
+                    const isExpanded = expandedBooks.has(bookTitle);
+                    const uniqueTypes = [...new Set(bookActivities.map(a => (a.activityType || a.category || 'Mixed').toUpperCase()))].slice(0, 3);
+                    const publisher = bookActivities[0]?.source?.publisher;
+
+                    return (
+                      <div key={bookTitle} className={isExpanded ? 'col-span-full' : ''}>
+
+                        {/* ── STACKED CARD (collapsed) ── */}
+                        {!isExpanded && (
+                          <div
+                            className="relative cursor-pointer select-none"
+                            style={{ height: '170px' }}
+                            onClick={() => toggleBook(bookTitle)}
+                          >
+                            {/* Ghost card 3 — furthest back */}
+                            <div className="absolute inset-x-0 top-0 h-full bg-gray-200 rounded-2xl border border-gray-300"
+                              style={{ transform: 'rotate(2.5deg) translateY(6px) translateX(3px)', zIndex: 1 }} />
+                            {/* Ghost card 2 — middle */}
+                            <div className="absolute inset-x-0 top-0 h-full bg-gray-100 rounded-2xl border border-gray-200"
+                              style={{ transform: 'rotate(-1.2deg) translateY(3px) translateX(-2px)', zIndex: 2 }} />
+                            {/* Front card */}
+                            <div className="absolute inset-x-0 top-0 h-full bg-white rounded-2xl border border-gray-200 shadow-md flex flex-col justify-between p-4 hover:shadow-xl hover:border-gray-300 transition-all"
+                              style={{ zIndex: 3 }}>
+                              {/* Top: icon + count */}
+                              <div className="flex items-start justify-between">
+                                <div className="w-9 h-9 bg-gray-900 rounded-xl flex items-center justify-center shrink-0">
+                                  <FileText size={15} className="text-white" />
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-2xl font-black text-gray-900 leading-none">{bookActivities.length}</span>
+                                  <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{bookActivities.length === 1 ? 'activity' : 'activities'}</p>
+                                </div>
+                              </div>
+                              {/* Bottom: title + type pills + cta */}
+                              <div>
+                                <p className="text-[11px] font-black text-gray-900 uppercase tracking-tight leading-tight line-clamp-2 mb-1.5">{bookTitle}</p>
+                                {publisher && <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-2">{publisher}</p>}
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                  {uniqueTypes.map(type => (
+                                    <span key={type} className="px-1.5 py-0.5 bg-gray-900 text-white text-[7px] font-black uppercase rounded">{type}</span>
+                                  ))}
+                                </div>
+                                <span className="text-[8px] font-black text-coral uppercase tracking-widest">Open →</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* ── EXPANDED GRID ── */}
+                        {isExpanded && (
+                          <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                            {/* Collapse header */}
+                            <button
+                              onClick={() => toggleBook(bookTitle)}
+                              className="w-full flex items-center gap-3 mb-5 pb-4 border-b border-gray-200 group"
+                            >
+                              <div className="w-8 h-8 bg-gray-900 rounded-xl flex items-center justify-center shrink-0">
+                                <FileText size={14} className="text-white" />
+                              </div>
+                              <div className="flex-1 min-w-0 text-left">
+                                <p className="text-xs font-black text-gray-900 uppercase tracking-wide truncate">{bookTitle}</p>
+                                {publisher && <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{publisher}</p>}
+                              </div>
+                              <span className="px-2 py-0.5 bg-white border border-gray-200 text-gray-500 rounded-full text-[9px] font-bold shrink-0 mr-2">
+                                {bookActivities.length} {bookActivities.length === 1 ? 'activity' : 'activities'}
+                              </span>
+                              <span className="text-[9px] font-bold text-gray-400 group-hover:text-coral uppercase tracking-widest transition-colors whitespace-nowrap">↑ Collapse</span>
+                            </button>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                              {bookActivities.map(activity => (
+                                <ActivityCard
+                                  key={activity.id}
+                                  activity={activity}
+                                  onEdit={() => handleEdit(activity)}
+                                  onDelete={() => handleDelete(activity.id, activity.title)}
+                                  onToggleFavorite={() => handleToggleFavorite(activity)}
+                                  onViewShare={() => handleViewShare(activity)}
+                                  onViewResults={() => setResultsModalActivity(activity)}
+                                  onViewHistory={() => setHistoryActivity(activity)}
+                                  formatDate={formatDate}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -608,10 +840,18 @@ export const ActivitiesPage: React.FC = () => {
 
       {/* RESULTS MODAL */}
       {resultsModalActivity && (
-        <SessionResultsModal 
-          isOpen={!!resultsModalActivity} 
-          onClose={() => setResultsModalActivity(null)} 
-          activity={resultsModalActivity} 
+        <SessionResultsModal
+          isOpen={!!resultsModalActivity}
+          onClose={() => setResultsModalActivity(null)}
+          activity={resultsModalActivity}
+        />
+      )}
+
+      {/* BUILD LOG MODAL */}
+      {historyActivity && (
+        <BuildLogModal
+          activity={historyActivity}
+          onClose={() => setHistoryActivity(null)}
         />
       )}
     </div>
