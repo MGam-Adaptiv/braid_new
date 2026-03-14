@@ -82,18 +82,19 @@ export const TestPage: React.FC = () => {
         let instructionsToUse = 'Complete the activity below.';
         let titleToUse = 'Activity';
 
-        // Check if link has content snapshot (new behavior)
-        if (link.content && link.content.questions && link.content.questions.length > 0) {
-          questionsToUse = link.content.questions;
+        // Check if link has content snapshot (covers both interactive and print activities).
+        // We check for link.content existing — NOT link.content.questions.length,
+        // because print/worksheet activities have 0 questions but still have a valid snapshot.
+        // This means students never need to read from /activities directly (no sign-in required).
+        if (link.content) {
+          questionsToUse = link.content.questions || [];
           wordBankToUse = link.content.wordBank || [];
           instructionsToUse = link.content.instructions || instructionsToUse;
           titleToUse = link.content.title || titleToUse;
-          
-          // If using snapshot, we skip fetching activity unless absolutely necessary.
-          // User requested: "Only fall back to fetching the activity ... if link.content is missing"
-          // So we do NOT fetch activity here.
+          // Snapshot is complete — no activity fetch needed
         } else {
-          // Fallback: Fetch activity
+          // Fallback for very old magic links created before snapshots were introduced.
+          // These will only work for signed-in teachers previewing their own content.
           const act = await getActivity(link.activityId);
           if (!act) {
             setError("Content missing.");
@@ -623,6 +624,3 @@ export const TestPage: React.FC = () => {
     </div>
   );
 };
-
-
-     
