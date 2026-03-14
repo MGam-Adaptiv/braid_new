@@ -110,7 +110,8 @@ Return ONLY valid JSON:
     const tokensUsed = {
       promptTokens: usage.promptTokens,
       completionTokens: usage.completionTokens,
-      totalTokens: usage.totalTokens || (usage.promptTokens + usage.completionTokens)
+      totalTokens: usage.totalTokens || (usage.promptTokens + usage.completionTokens),
+      model: 'mistral-small-latest'
     };
 
     return {
@@ -139,3 +140,4 @@ Return ONLY valid JSON:
 };
 
 export { handler };
+
