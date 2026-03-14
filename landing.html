@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BraidStudio — Teaching materials, adapted to your classroom</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --coral:      #EF3D5A;
+      --coral-dark: #d42e4a;
+      --black:      #111111;
+      --gray:       #6B7280;
+      --light-gray: #F2F2F2;
+      --white:      #FFFFFF;
+      --border:     #E5E5E5;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--light-gray);
+      color: var(--black);
+      overflow-x: hidden;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 56px;
+      background: rgba(242,242,242,0.92);
+      backdrop-filter: blur(16px);
+      transition: box-shadow 0.3s;
+    }
+
+    .logo img { height: 36px; width: auto; display: block; }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-ghost {
+      padding: 10px 22px;
+      background: transparent;
+      color: var(--black);
+      border: 1.5px solid rgba(0,0,0,0.2);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      border-radius: 8px;
+      display: inline-block;
+    }
+
+    .btn-ghost:hover { border-color: var(--black); background: rgba(0,0,0,0.04); }
+
+    .btn-signup {
+      padding: 10px 22px;
+      background: var(--coral);
+      color: var(--white);
+      border: none;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      border-radius: 8px;
+      display: inline-block;
+    }
+
+    .btn-signup:hover { background: var(--coral-dark); transform: translateY(-1px); }
+
+    /* ─── HERO ─── */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      padding: 100px 56px 60px;
+      gap: 40px;
+      position: relative;
+      overflow: hidden;
+      background: var(--light-gray);
+    }
+
+    /* ─── HERO LEFT — blob + mockup + editor elements ─── */
+    .hero-visual {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 520px;
+    }
+
+    .blob-wrap {
+      position: relative;
+      width: 400px;
+      height: 400px;
+    }
+
+    .blob-bg {
+      position: absolute;
+      inset: 0;
+      border-radius: 60% 40% 55% 45% / 50% 55% 45% 50%;
+      background: linear-gradient(135deg, #FFD6DC 0%, #FFECD2 60%, #FFD6E8 100%);
+      animation: blobmorph 9s ease-in-out infinite alternate;
+    }
+
+    @keyframes blobmorph {
+      from { border-radius: 60% 40% 55% 45% / 50% 55% 45% 50%; }
+      to   { border-radius: 40% 60% 45% 55% / 55% 45% 55% 45%; }
+    }
+
+    /* Product mockup */
+    .mockup {
+      position: absolute;
+      inset: 44px;
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 20px 56px rgba(0,0,0,0.13), 0 4px 16px rgba(0,0,0,0.06);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: float 5s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-7px); }
+    }
+
+    .mockup-topbar {
+      height: 36px;
+      background: #1a1a1a;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 7px;
+      flex-shrink: 0;
+    }
+
+    .mockup-dot { width: 9px; height: 9px; border-radius: 50%; }
+
+    .mockup-body {
+      flex: 1;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      overflow: hidden;
+    }
+
+    .mockup-label {
+      font-size: 7px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--coral);
+    }
+
+    .mockup-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--black);
+      line-height: 1.3;
+    }
+
+    .mockup-chips {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .mockup-chip {
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-size: 7px;
+      font-weight: 600;
+    }
+
+    .chip-coral  { background: rgba(239,61,90,0.1);  color: var(--coral); }
+    .chip-blue   { background: rgba(74,144,217,0.1);  color: #4A90D9; }
+    .chip-green  { background: rgba(16,185,129,0.1);  color: #10B981; }
+    .chip-amber  { background: rgba(245,166,35,0.1);  color: #D97706; }
+
+    .mockup-divider { height: 1px; background: var(--border); }
+
+    .mockup-row-label {
+      font-size: 7px;
+      font-weight: 600;
+      color: var(--gray);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .mockup-activity {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 7px;
+      background: var(--light-gray);
+    }
+
+    .mockup-act-icon {
+      width: 24px; height: 24px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .mockup-act-name  { font-size: 8px; font-weight: 600; color: var(--black); }
+    .mockup-act-sub   { font-size: 7px; color: var(--gray); margin-top: 1px; }
+
+    .mockup-bar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 3px;
+    }
+
+    .mockup-bar-fill { height: 100%; border-radius: 2px; }
+
+    /* ─── HERO RIGHT ─── */
+    .hero-right {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(239,61,90,0.07);
+      border: 1px solid rgba(239,61,90,0.2);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--coral);
+      margin-bottom: 28px;
+      width: fit-content;
+    }
+
+    .hero-tag-dot {
+      width: 7px; height: 7px;
+      background: var(--coral);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    .hero-right h2 {
+      font-size: clamp(30px, 3.2vw, 48px);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      color: var(--black);
+      margin-bottom: 18px;
+    }
+
+    .hero-right p.hero-sub {
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--gray);
+      font-weight: 400;
+      max-width: 400px;
+      margin-bottom: 36px;
+    }
+
+    .hero-cta-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .btn-hero-primary {
+      padding: 14px 32px;
+      background: var(--coral);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-hero-primary:hover {
+      background: var(--coral-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(239,61,90,0.3);
+    }
+
+    .btn-hero-ghost {
+      padding: 14px 28px;
+      background: transparent;
+      color: var(--black);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-hero-ghost:hover { border-color: var(--black); }
+
+    .hero-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .hero-chip {
+      padding: 7px 14px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--black);
+    }
+
+    /* ─── PAIN STRIP ─── */
+    .pain-strip {
+      background: var(--black);
+      padding: 88px 56px;
+    }
+
+    .strip-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      color: var(--coral);
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .strip-intro {
+      text-align: center;
+      font-size: clamp(24px, 2.8vw, 38px);
+      font-weight: 800;
+      color: white;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      margin-bottom: 64px;
+    }
+
+    .strip-intro span { color: var(--coral); }
+
+    .pain-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .pain-item {
+      padding: 40px 36px;
+      background: #141414;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px;
+      transition: border-color 0.3s, background 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pain-item::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--coral), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .pain-item:hover { background: #1c1c1c; border-color: rgba(239,61,90,0.3); }
+    .pain-item:hover::before { opacity: 1; }
+
+    .pain-num {
+      font-size: 72px;
+      font-weight: 900;
+      color: var(--coral);
+      opacity: 0.15;
+      line-height: 1;
+      display: block;
+      margin-bottom: -12px;
+      letter-spacing: -0.05em;
+    }
+
+    .pain-headline {
+      font-size: 22px;
+      font-weight: 800;
+      color: white;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      margin-bottom: 14px;
+    }
+
+    .pain-headline span { color: var(--coral); }
+
+    .pain-item p {
+      font-size: 14px;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.45);
+      font-weight: 400;
+    }
+
+    /* ─── FEATURES ─── */
+    .features-strip {
+      padding: 0 56px 72px;
+    }
+
+    .features-inner {
+      background: white;
+      border-radius: 20px;
+      padding: 48px 48px 40px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 36px 48px;
+    }
+
+    .feat-item {}
+
+    .feat-icon {
+      width: 52px; height: 52px;
+      border-radius: 12px;
+      background: var(--light-gray);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 14px;
+    }
+
+    .feat-item h4 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--black);
+      margin-bottom: 6px;
+    }
+
+    .feat-item p {
+      font-size: 13px;
+      color: var(--gray);
+      line-height: 1.6;
+    }
+
+    /* ─── HOW IT WORKS ─── */
+    .how {
+      padding: 80px 56px;
+      background: var(--black);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .how::before {
+      content: '';
+      position: absolute;
+      top: -120px; right: -120px;
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, rgba(239,61,90,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .how-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 48px;
+    }
+
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      color: var(--coral);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .how-header h2 {
+      font-size: clamp(32px, 3.5vw, 52px);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      color: white;
+      max-width: 420px;
+    }
+
+    .how-header p {
+      font-size: 14px;
+      color: rgba(255,255,255,0.4);
+      max-width: 280px;
+      line-height: 1.65;
+      font-weight: 300;
+    }
+
+    .steps-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+    }
+
+    .step-card {
+      background: #1a1a1a;
+      padding: 36px 32px;
+      transition: background 0.3s;
+      border-radius: 4px;
+    }
+
+    .step-card:first-child { border-radius: 12px 4px 4px 12px; }
+    .step-card:last-child  { border-radius: 4px 12px 12px 4px; }
+    .step-card:hover { background: #222; }
+
+    .step-num {
+      font-size: 64px;
+      font-weight: 900;
+      color: var(--coral);
+      opacity: 0.35;
+      line-height: 1;
+      margin-bottom: -4px;
+      display: block;
+    }
+
+    .step-dot {
+      width: 8px; height: 8px;
+      background: var(--coral);
+      border-radius: 50%;
+      margin-bottom: 18px;
+    }
+
+    .step-card h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 10px;
+    }
+
+    .step-card p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.65;
+      font-weight: 300;
+    }
+
+    /* ─── QUOTE ─── */
+    .quote-section {
+      padding: 100px 56px;
+      background: var(--light-gray);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .quote-card {
+      background: white;
+      border-radius: 20px;
+      padding: 56px 64px;
+      max-width: 680px;
+      text-align: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+      position: relative;
+    }
+
+    .quote-stars { color: #F5A623; font-size: 18px; margin-bottom: 24px; letter-spacing: 3px; }
+
+    .quote-text {
+      font-size: clamp(18px, 2vw, 26px);
+      font-weight: 700;
+      line-height: 1.4;
+      color: var(--black);
+      letter-spacing: -0.02em;
+      margin-bottom: 24px;
+    }
+
+    .quote-author { font-size: 13px; color: var(--gray); }
+    .quote-author strong { color: var(--coral); font-weight: 600; }
+
+    /* ─── CTA ─── */
+    .cta-section {
+      padding: 100px 56px;
+      background: var(--coral);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: -120px; left: -120px;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .cta-section h2 {
+      font-size: clamp(36px, 4.5vw, 60px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: white;
+      margin-bottom: 16px;
+      position: relative; z-index: 1;
+    }
+
+    .cta-section p {
+      font-size: 17px;
+      color: rgba(255,255,255,0.75);
+      margin-bottom: 40px;
+      max-width: 420px;
+      margin-left: auto; margin-right: auto;
+      line-height: 1.65;
+      position: relative; z-index: 1;
+    }
+
+    .btn-cta-white {
+      display: inline-block;
+      padding: 16px 48px;
+      background: white;
+      color: var(--coral);
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      border-radius: 10px;
+      transition: all 0.2s;
+      position: relative; z-index: 1;
+    }
+
+    .btn-cta-white:hover {
+      background: var(--black);
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    /* ─── FOOTER ─── */
+    footer {
+      background: var(--black);
+      padding: 36px 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    footer img {
+      height: 28px;
+      width: auto;
+      filter: brightness(0) invert(1);
+      opacity: 0.85;
+    }
+
+    .footer-copy { font-size: 12px; color: rgba(255,255,255,0.25); }
+
+    /* ─── REVEAL ─── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .rd1 { transition-delay: 0.1s; }
+    .rd2 { transition-delay: 0.2s; }
+    .rd3 { transition-delay: 0.3s; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 960px) {
+      nav { padding: 16px 24px; }
+      .hero { grid-template-columns: 1fr; padding: 100px 24px 60px; gap: 40px; }
+      .hero-visual { order: -1; }
+      .blob-wrap { width: 320px; height: 320px; }
+      .pain-strip, .how, .quote-section, .cta-section { padding: 64px 24px; }
+      .pain-grid { grid-template-columns: 1fr; gap: 12px; }
+      .features-strip { padding: 0 24px 64px; }
+      .features-inner { padding: 36px 28px; }
+      .features-grid { grid-template-columns: 1fr 1fr; gap: 28px 32px; }
+      .how-header { flex-direction: column; gap: 16px; align-items: flex-start; }
+      .steps-row { grid-template-columns: 1fr; gap: 2px; }
+      .step-card:first-child { border-radius: 12px 12px 4px 4px; }
+      .step-card:last-child  { border-radius: 4px 4px 12px 12px; }
+      footer { flex-direction: column; padding: 32px 24px; }
+    }
+
+    @media (max-width: 540px) {
+      .features-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── NAV ─── -->
+<nav id="navbar">
+  <a href="#" class="logo">
+    <img src="braid-logo.svg" alt="BraidStudio">
+  </a>
+  <div class="nav-actions">
+    <a href="#" class="btn-ghost auth-link" data-path="/#/login">Sign In</a>
+    <a href="#" class="btn-signup auth-link" data-path="/#/signup">Sign Up</a>
+  </div>
+</nav>
+
+<!-- ─── HERO ─── -->
+<section class="hero">
+
+  <!-- LEFT: blob + mockup + editor buttons -->
+  <div class="hero-visual">
+    <div class="blob-wrap">
+      <div class="blob-bg"></div>
+      <div class="mockup">
+        <div class="mockup-topbar">
+          <div class="mockup-dot" style="background:#FF5F57;"></div>
+          <div class="mockup-dot" style="background:#FEBC2E;"></div>
+          <div class="mockup-dot" style="background:#28C840;"></div>
+        </div>
+        <div class="mockup-body">
+          <span class="mockup-label">Activity Ready</span>
+          <div class="mockup-title">Unit 4 — Present Perfect<br>Reading Comprehension Quiz</div>
+          <div class="mockup-chips">
+            <span class="mockup-chip chip-coral">Quiz</span>
+            <span class="mockup-chip chip-blue">B2</span>
+            <span class="mockup-chip chip-green">8 Questions</span>
+            <span class="mockup-chip chip-amber">20 min</span>
+          </div>
+          <div class="mockup-divider"></div>
+          <span class="mockup-row-label">Generated Activities</span>
+          <div class="mockup-activity">
+            <div class="mockup-act-icon" style="background:var(--coral);">📝</div>
+            <div>
+              <div class="mockup-act-name">Gap Fill Exercise</div>
+              <div class="mockup-act-sub">Vocabulary · 12 blanks</div>
+              <div class="mockup-bar"><div class="mockup-bar-fill" style="width:85%;background:linear-gradient(90deg,var(--coral),#FF6B85);"></div></div>
+            </div>
+          </div>
+          <div class="mockup-activity">
+            <div class="mockup-act-icon" style="background:#4A90D9;">💬</div>
+            <div>
+              <div class="mockup-act-name">Discussion Warmer</div>
+              <div class="mockup-act-sub">Speaking · 5 prompts</div>
+              <div class="mockup-bar"><div class="mockup-bar-fill" style="width:60%;background:linear-gradient(90deg,#4A90D9,#6BAED6);"></div></div>
+            </div>
+          </div>
+          <div class="mockup-activity">
+            <div class="mockup-act-icon" style="background:#10B981;">🎲</div>
+            <div>
+              <div class="mockup-act-name">Word Game</div>
+              <div class="mockup-act-sub">Vocabulary · 20 words</div>
+              <div class="mockup-bar"><div class="mockup-bar-fill" style="width:45%;background:linear-gradient(90deg,#10B981,#34D399);"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: text + CTA -->
+  <div class="hero-right">
+    <div class="hero-tag">
+      <span class="hero-tag-dot"></span>
+      AI Powered Activity Design for ELT Teachers
+    </div>
+    <h2>Stop Struggling.<br><span style="color:var(--coral);">Start Adapting.</span><br><span style="color:#1F2937;">More Teaching.</span></h2>
+    <p class="hero-sub">
+      Upload any educational material and BraidStudio builds quizzes, discussions, gap fills, role plays and more. Built around your content, ready for your class.
+    </p>
+    <div class="hero-cta-row">
+      <a href="#" class="btn-hero-primary auth-link" data-path="/#/signup">Start Braiding</a>
+      <a href="#" class="btn-hero-ghost auth-link" data-path="/#/login">Sign In</a>
+    </div>
+    <div class="hero-chips">
+      <span class="hero-chip">📝 Quiz</span>
+      <span class="hero-chip">💬 Discussion</span>
+      <span class="hero-chip">🎲 Word Game</span>
+      <span class="hero-chip">✏️ Gap Fill</span>
+      <span class="hero-chip">🎭 Role Play</span>
+    </div>
+  </div>
+
+</section>
+
+<!-- ─── PAIN STRIP ─── -->
+<section class="pain-strip">
+  <p class="strip-eyebrow">Sound familiar?</p>
+  <p class="strip-intro reveal">You adapt materials every week.<br><span>It should not take all evening.</span></p>
+  <div class="pain-grid">
+    <div class="pain-item reveal">
+      <span class="pain-num">01</span>
+      <h3 class="pain-headline">Adapting takes<br><span>hours you don't have.</span></h3>
+      <p>You find the right material to teach. Then spend the evening turning it into something classroom-ready. The content is great. The process isn't.</p>
+    </div>
+    <div class="pain-item reveal rd1">
+      <span class="pain-num">02</span>
+      <h3 class="pain-headline">Generic resources<br><span>weren't built for your class.</span></h3>
+      <p>Downloaded activities were made for someone else's students, level, and unit. Yours are working from your material. They need activities that match.</p>
+    </div>
+    <div class="pain-item reveal rd2">
+      <span class="pain-num">03</span>
+      <h3 class="pain-headline">You know exactly<br><span>what your students need.</span></h3>
+      <p>A quiz on this chapter. A warmer before that reading. A gap fill for the vocabulary on page 12. It should take minutes, not an afternoon.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FEATURES ─── -->
+<section class="features-strip">
+  <div class="features-inner reveal">
+    <div class="features-grid">
+      <div class="feat-item">
+        <div class="feat-icon">🔍</div>
+        <h4>Smart Reading</h4>
+        <p>Understands vocabulary, grammar and topic from any educational material.</p>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon">🎲</div>
+        <h4>6 Activity Types</h4>
+        <p>Quiz, Discussion, Word Game, Gap Fill, Role Play, Warmer.</p>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon">⚡</div>
+        <h4>Interactive Mode</h4>
+        <p>One click turns any activity into a student-facing digital exercise.</p>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon">🔗</div>
+        <h4>Magic Link Sharing</h4>
+        <p>No student login needed. Send a link and they are in.</p>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon">📚</div>
+        <h4>Activity Library</h4>
+        <p>Every activity saved, searchable, always yours.</p>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon">✨</div>
+        <h4>AI Refinement</h4>
+        <p>Enhance, simplify, scaffold. Fine-tune your activity in seconds.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── HOW IT WORKS ─── -->
+<section class="how">
+  <div class="how-header reveal">
+    <div>
+      <div class="eyebrow">How it works</div>
+      <h2>Three steps to a<br>better lesson.</h2>
+    </div>
+    <p>Upload anything you teach with. BraidStudio reads it, understands it, and builds the activity around it.</p>
+  </div>
+  <div class="steps-row">
+    <div class="step-card reveal">
+      <span class="step-num">01</span>
+      <div class="step-dot"></div>
+      <h3>Upload Your Material</h3>
+      <p>Upload any piece of educational material. A text, a unit, a reading passage, anything you teach with.</p>
+    </div>
+    <div class="step-card reveal rd1">
+      <span class="step-num">02</span>
+      <div class="step-dot"></div>
+      <h3>BraidStudio Reads It</h3>
+      <p>Our AI extracts vocabulary, grammar and topic, understanding your material the way a teacher would.</p>
+    </div>
+    <div class="step-card reveal rd2">
+      <span class="step-num">03</span>
+      <div class="step-dot"></div>
+      <h3>Your Activity Is Ready</h3>
+      <p>Quiz, discussion, gap fill. Pick your format and teach. Shaped around your material, built for your class.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── QUOTE ─── -->
+<section class="quote-section">
+  <div class="quote-card reveal">
+    <div class="quote-stars">★★★★★</div>
+    <p class="quote-text">"My students finally get activities that match exactly what we have been studying, not something generic off the internet."</p>
+    <p class="quote-author">— <strong>EFL Teacher</strong>, International School</p>
+  </div>
+</section>
+
+<!-- ─── CTA ─── -->
+<section class="cta-section">
+  <h2 class="reveal">Ready to Start Braiding?</h2>
+  <p class="reveal rd1">Join teachers building better, more personal lessons every day.</p>
+  <a href="#" class="btn-cta-white reveal rd2 auth-link" data-path="/#/signup">Start Braiding</a>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <img src="braid-logo.svg" alt="BraidStudio">
+  <span class="footer-copy">© 2026 BraidStudio. All rights reserved.</span>
+</footer>
+
+<script>
+  const io = new IntersectionObserver(
+    entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+    { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
+  );
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  const nav = document.getElementById('navbar');
+  window.addEventListener('scroll', () => {
+    nav.style.boxShadow = window.scrollY > 40 ? '0 4px 20px rgba(0,0,0,0.07)' : 'none';
+  }, { passive: true });
+
+  // Fix auth links — works both as local file:// and from server
+  const base = window.location.protocol === 'file:'
+    ? 'http://localhost:8888'
+    : window.location.origin;
+
+  document.querySelectorAll('.auth-link').forEach(el => {
+    el.href = base + el.dataset.path;
+  });
+</script>
+</body>
+</html>
