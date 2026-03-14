@@ -28,7 +28,7 @@ export const extractTextFromImage = async (base64Image: string, userId: string):
     const data = await response.json();
     
     if (data.tokensUsed) {
-      await trackTokenUsage(userId, data.tokensUsed.totalTokens, 'ocr');
+      await trackTokenUsage(userId, data.tokensUsed, 'ocr');
     }
 
     return { fullText: data.fullText || '' };
@@ -38,3 +38,4 @@ export const extractTextFromImage = async (base64Image: string, userId: string):
     return { fullText: "Failed to extract text from the provided image." };
   }
 };
+
