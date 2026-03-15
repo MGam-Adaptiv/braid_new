@@ -1,5 +1,6 @@
 import { Handler } from '@netlify/functions';
 import { Mistral } from '@mistralai/mistralai';
+import { checkRateLimit, getClientIp } from './utils/rateLimiter';
 
 interface RequestBody {
   enhancementType: string;
@@ -59,6 +60,16 @@ const handler: Handler = async (event) => {
 
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+  }
+
+  const ip = getClientIp(event.headers);
+  const { limited, headers: rlHeaders } = checkRateLimit(ip);
+  if (limited) {
+    return {
+      statusCode: 429,
+      headers: { ...headers, ...rlHeaders },
+      body: JSON.stringify({ error: 'Too many requests. Please wait a minute.' }),
+    };
   }
 
   try {
@@ -138,3 +149,4 @@ Return ONLY the enhanced student content section. No titles, no teacher notes, n
 };
 
 export { handler };
+
