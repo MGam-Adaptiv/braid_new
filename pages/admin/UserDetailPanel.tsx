@@ -60,13 +60,17 @@ export default function UserDetailPanel({ user, onClose, onUpdate }: UserDetailP
   const deleteUser = async () => {
     setLoading(true);
     try {
-      // Delete from Firebase Auth via Netlify function
+      // Delete from Firebase Auth via Netlify function (ignore if already deleted)
       const res = await fetch('/.netlify/functions/admin-delete-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid: user.uid, action: 'delete' }),
       });
-      if (!res.ok) throw new Error('Auth deletion failed');
+      if (!res.ok) {
+        const data = await res.json();
+        const isAlreadyGone = data.error?.includes('user-not-found') || data.error?.includes('no user record');
+        if (!isAlreadyGone) throw new Error('Auth deletion failed');
+      }
       // Delete Firestore document
       await db.collection('users').doc(user.uid).delete();
       toast.success('User permanently deleted');
