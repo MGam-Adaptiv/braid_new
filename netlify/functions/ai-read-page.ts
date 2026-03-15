@@ -79,30 +79,22 @@ const handler: Handler = async (event, context) => {
             },
             {
               type: 'text',
-              text: `You are an expert ELT (English Language Teaching) coursebook analyst. Read this page thoroughly to identify target language.
-
-VOCABULARY:
-List useful words and phrases found (20-40 items). Include Daily routine phrases, Sport collocations, Time expressions, verbs, etc.
-
-GRAMMAR:
-Identify target grammar points (e.g., "Present Simple", "Prepositions of time").
-
-CEFR LEVEL DETECTION:
-Estimate the CEFR level (A1, A2, B1, B2, C1, C2) based on vocabulary complexity, grammar structures, and text length.
-
-TOPIC:
-Identify the communicative theme.
+              text: `Perform high-fidelity OCR on this educational material.
+Identify and extract all text content while preserving the logical structure.
+Categorize text segments into paragraphs, headings, lists, or tables.
 
 Return ONLY valid JSON:
 {
-  "vocabulary": { "items": ["..."], "count": 30, "confidence": "high" },
-  "grammar": { "points": ["..."], "count": 2, "confidence": "high" },
-  "readingText": { "content": "passage text", "present": true, "title": "Heading", "confidence": "high" },
-  "topic": "...",
-  "estimatedLevel": "B1",
-  "levelConfidence": "high",
-  "levelReasoning": "Brief explanation of level choice",
-  "pageType": "mixed"
+  "fullText": "string containing all extracted text",
+  "blocks": [
+    {
+      "text": "segment text",
+      "type": "paragraph | heading | list | table",
+      "confidence": 0.95
+    }
+  ],
+  "confidence": 0.9,
+  "language": "en"
 }`,
             },
           ],
@@ -117,12 +109,8 @@ Return ONLY valid JSON:
       throw new Error('No content received from Mistral');
     }
 
-    // Ensure the content is valid JSON before returning
     let jsonResponse;
     try {
-        // Sometimes the model might wrap the JSON in markdown code blocks, although response_format should prevent it.
-        // Just in case, we can try to clean it or parse it directly.
-        // Since we asked for JSON object, it should be clean JSON.
         jsonResponse = JSON.parse(content as string);
     } catch (e) {
         console.error("Failed to parse JSON from Mistral response:", content);
@@ -144,13 +132,23 @@ Return ONLY valid JSON:
     };
 
   } catch (error: any) {
-    console.error('Analysis failed:', error);
+    console.error('OCR extraction failed:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Analysis failed', details: error.message }),
+      body: JSON.stringify({ 
+        error: 'OCR extraction failed', 
+        details: error.message,
+        fallback: {
+            fullText: "",
+            blocks: [],
+            confidence: 0,
+            language: "unknown"
+        }
+      }),
     };
   }
 };
 
 export { handler };
+
