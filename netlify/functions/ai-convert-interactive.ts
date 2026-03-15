@@ -1,5 +1,6 @@
 import { Handler } from '@netlify/functions';
 import { Mistral } from '@mistralai/mistralai';
+import { checkRateLimit, getClientIp } from './utils/rateLimiter';
 
 interface RequestBody {
   studentContent: string;
@@ -28,6 +29,16 @@ const handler: Handler = async (event, context) => {
       statusCode: 405,
       headers,
       body: JSON.stringify({ error: 'Method Not Allowed' }),
+    };
+  }
+
+  const ip = getClientIp(event.headers);
+  const { limited, headers: rlHeaders } = checkRateLimit(ip);
+  if (limited) {
+    return {
+      statusCode: 429,
+      headers: { ...headers, ...rlHeaders },
+      body: JSON.stringify({ error: 'Too many requests. Please wait a minute.' }),
     };
   }
 
@@ -218,3 +229,4 @@ ${answerKey}
 };
 
 export { handler };
+
