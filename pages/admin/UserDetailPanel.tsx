@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Shield, RefreshCw, Ban, Star, Gift, CheckCircle } from 'lucide-react';
+import { X, Shield, RefreshCw, Ban, Star, Gift, CheckCircle, Trash2 } from 'lucide-react';
 import { db, increment } from '../../lib/firebase';
 import toast from 'react-hot-toast';
 
@@ -12,6 +12,7 @@ interface UserDetailPanelProps {
 export default function UserDetailPanel({ user, onClose, onUpdate }: UserDetailPanelProps) {
   const [loading, setLoading] = useState(false);
   const [giftAmount, setGiftAmount] = useState(5000);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // VIP Logic
   const VIP_EMAILS = ['teacher@test.com', 'admin@braidstudio.com'];
@@ -55,6 +56,30 @@ export default function UserDetailPanel({ user, onClose, onUpdate }: UserDetailP
     if(!confirm("Reset ALL monthly token usage for this user?")) return;
     await db.collection('users').doc(user.uid).update({ totalTokensUsed: 0 });
   }, "Usage reset to 0");
+
+  const deleteUser = async () => {
+    setLoading(true);
+    try {
+      // Delete from Firebase Auth via Netlify function
+      const res = await fetch('/.netlify/functions/admin-delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: user.uid, action: 'delete' }),
+      });
+      if (!res.ok) throw new Error('Auth deletion failed');
+      // Delete Firestore document
+      await db.collection('users').doc(user.uid).delete();
+      toast.success('User permanently deleted');
+      onClose();
+      onUpdate();
+    } catch (error) {
+      console.error(error);
+      toast.error('Delete failed');
+    } finally {
+      setLoading(false);
+      setShowDeleteConfirm(false);
+    }
+  };
 
   return (
     <div className="fixed inset-y-0 right-0 w-[400px] bg-white shadow-2xl p-6 transform transition-transform border-l border-gray-100 overflow-y-auto z-50 animate-in slide-in-from-right duration-300">
@@ -185,6 +210,38 @@ export default function UserDetailPanel({ user, onClose, onUpdate }: UserDetailP
               <button onClick={() => updateStatus('approved')} disabled={loading} className="w-full py-3 flex items-center justify-center gap-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition text-sm font-bold">
                 <Shield className="w-4 h-4" /> Unban / Restore Access
               </button>
+            )}
+
+            {/* Delete User */}
+            {!showDeleteConfirm ? (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={loading}
+                className="w-full py-3 flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-400 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition text-sm font-medium mt-2"
+              >
+                <Trash2 className="w-4 h-4" /> Delete Account
+              </button>
+            ) : (
+              <div className="mt-2 p-4 bg-red-50 border border-red-200 rounded-xl">
+                <p className="text-sm font-bold text-red-700 mb-1">Permanently delete this user?</p>
+                <p className="text-xs text-red-500 mb-3">This removes them from Firebase Auth and the user database. This cannot be undone.</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={loading}
+                    className="flex-1 py-2 bg-white border border-gray-200 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-50 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={deleteUser}
+                    disabled={loading}
+                    className="flex-1 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition flex items-center justify-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" /> {loading ? 'Deleting…' : 'Yes, Delete'}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </section>
