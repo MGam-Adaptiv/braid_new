@@ -1,5 +1,6 @@
 import { Handler } from '@netlify/functions';
 import { Mistral } from '@mistralai/mistralai';
+import { checkRateLimit, getClientIp } from './utils/rateLimiter';
 
 interface BookBrief {
   book: string;
@@ -54,6 +55,15 @@ const TIME_RANGE_LABEL: Record<string, string> = {
 const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
+  }
+
+  const ip = getClientIp(event.headers);
+  const { limited } = checkRateLimit(ip);
+  if (limited) {
+    return {
+      statusCode: 429,
+      body: JSON.stringify({ error: 'Too many requests. Please wait a minute.' }),
+    };
   }
 
   const apiKey = process.env.MISTRAL_API_KEY;
