@@ -8,6 +8,9 @@ export interface UserProfile {
   createdAt?: any;
   lastLogin?: any;
   totalTokensUsed?: number;
+  totalCostUsed?: number;
+  tokenLimit?: number;
+  monthlyCostLimit?: number;
   bonusTokens?: number;
   isWhitelisted?: boolean;
   lastResetDate?: any;
@@ -66,6 +69,9 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
           ? 'approved' 
           : (data.status || 'pending'),
         totalTokensUsed: data.totalTokensUsed || 0,
+        totalCostUsed: data.totalCostUsed || 0,
+        tokenLimit: data.tokenLimit || 50000,
+        monthlyCostLimit: data.monthlyCostLimit || 0,
         bonusTokens: data.bonusTokens || 0,
         isWhitelisted: data.isWhitelisted || false,
         lastActive: data.lastActive || new Date().toISOString(),
@@ -104,6 +110,9 @@ export const createUserProfile = async (
         role: 'teacher',
         status: 'pending',
         totalTokensUsed: 0,
+        totalCostUsed: 0,
+        tokenLimit: 50000,
+        monthlyCostLimit: 0,
         bonusTokens: 0,
         isWhitelisted: false,
         createdAt: serverTimestamp(),
@@ -204,22 +213,31 @@ export const checkUsageLimit = async (userId: string, email?: string | null): Pr
 
       if (lastResetDate.getTime() < currentCycleStart.getTime()) {
         console.log(`🔄 Lazy Reset Triggered for ${email}. Resetting usage.`);
-        
+
         transaction.update(userRef, {
           totalTokensUsed: 0,
+          totalCostUsed: 0,
           bonusTokens: 0, // Reset gifted tokens at the start of a new month
           lastResetDate: serverTimestamp()
         });
-        
+
         return { allowed: true, usage: 0 };
       }
 
-      const limit = 50000 + (data.bonusTokens || 0);
+      const tokenBase = (data as any).tokenLimit || 50000;
+      const limit = tokenBase + (data.bonusTokens || 0);
 
       if (currentUsage >= limit) {
         return { allowed: false, usage: currentUsage };
       }
-      
+
+      // Cost gate — only active if admin has set monthlyCostLimit > 0
+      const costLimit = (data as any).monthlyCostLimit || 0;
+      const currentCost = (data as any).totalCostUsed || 0;
+      if (costLimit > 0 && currentCost >= costLimit) {
+        return { allowed: false, usage: currentUsage };
+      }
+
       return { allowed: true, usage: currentUsage };
     });
   } catch (error) {
