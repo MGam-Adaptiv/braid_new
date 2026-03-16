@@ -34,10 +34,11 @@ export const trackTokenUsage = async (
   try {
     const batch = db.batch();
 
-    // 1. Increment totalTokensUsed on user document (existing behaviour, kept for compatibility)
+    // 1. Increment totalTokensUsed + totalCostUsed on user document
     const userRef = db.collection('users').doc(userId);
     batch.update(userRef, {
       totalTokensUsed: firebase.firestore.FieldValue.increment(totalTokens),
+      totalCostUsed:   firebase.firestore.FieldValue.increment(costEUR),
       lastActive: firebase.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -61,3 +62,4 @@ export const trackTokenUsage = async (
     console.error('Failed to track token usage:', error);
   }
 };
+
