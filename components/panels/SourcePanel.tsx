@@ -72,7 +72,7 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
   const [newGrammarInput, setNewGrammarInput] = useState('');
   
   const [editedTopic, setEditedTopic] = useState('');
-  const [selectedLevel, setSelectedLevel] = useState('B1');
+  const [selectedLevel, setSelectedLevel] = useState('A1');
   const [formPublisher, setFormPublisher] = useState('');
   const [customPublisher, setCustomPublisher] = useState('');
   const [formBookTitle, setFormBookTitle] = useState('');
@@ -114,11 +114,19 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
     const finalPublisher = formPublisher === 'Other...' ? customPublisher : formPublisher;
     for (let i = 0; i < pages.length; i++) { const result = await readPage(updatedPages[i].blobUrl, user.uid); if (!result.error) { analyses.push(result); updatedPages[i] = { ...updatedPages[i], analysis: result, analysisCached: true, isDirty: false, isTagged: true, tagInfo: { publisher: finalPublisher, bookTitle: formBookTitle } }; } }
     setPages(updatedPages);
+
+    if (analyses.length === 0) {
+      toast.error("Scan failed — could not reach the AI service. Check your connection and try again.");
+      setStage('TAGGING');
+      setWorkflowStage('tagging');
+      return;
+    }
+
     const vocabSet = new Set<string>(); analyses.forEach(e => e.vocabulary?.items?.forEach(v => vocabSet.add(v)));
     const grammarSet = new Set<string>(); analyses.forEach(e => e.grammar?.points?.forEach(g => grammarSet.add(g)));
     setCoreVocab(Array.from(vocabSet).slice(0, 20)); setSecondaryVocab(Array.from(vocabSet).slice(20));
     setCoreGrammar(Array.from(grammarSet).slice(0, 5)); setSecondaryGrammar(Array.from(grammarSet).slice(5));
-    setEditedTopic(analyses[0]?.topic || 'General English'); setSelectedLevel(analyses[0]?.estimatedLevel || 'B1');
+    setEditedTopic(analyses[0]?.topic || 'General English'); setSelectedLevel(analyses[0]?.estimatedLevel || 'A1');
     setStage('CONFIRMING');
   };
 
@@ -262,7 +270,7 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
   return (
     <div className={`h-full flex flex-col bg-[#F9FAFB] overflow-hidden ${isHorizontal ? 'max-h-[200px]' : ''}`}>
       <input ref={fileInputRef} type="file" multiple className="hidden" onChange={e => handleFiles(e.target.files)} />
-      {!isHorizontal && <div className="px-6 py-5 border-b border-gray-100 bg-white/80 backdrop-blur shrink-0 flex items-center justify-between"><h2 className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Source Material</h2>{pages.length > 0 && <button onClick={() => setPages([])} className="text-[10px] font-black text-coral uppercase hover:underline">Clear</button>}</div>}
+      {!isHorizontal && <div className="px-6 py-5 border-b border-gray-100 bg-white/80 backdrop-blur shrink-0 flex items-center justify-between"><h2 className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Source Material</h2>{pages.length > 0 && <button onClick={() => { setPages([]); setStage('IDLE'); setWorkflowStage('tagging'); setCoreVocab([]); setSecondaryVocab([]); setCoreGrammar([]); setSecondaryGrammar([]); setEditedTopic(''); setFormBookTitle(''); setMaterialSaved(false); }} className="text-[10px] font-black text-coral uppercase hover:underline">Clear</button>}</div>}
       
       <div className={`flex-1 overflow-y-auto ${isHorizontal ? 'p-4' : 'p-6'} space-y-6 no-scrollbar`}>
         {stage === 'IDLE' ? (
@@ -280,9 +288,9 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
         ) : stage === 'CONFIRMING' ? (
            <div className="space-y-8 pb-10">
               <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-5">
-                 <h3 className="font-black text-gray-900 uppercase text-xs tracking-widest">Metadata</h3>
+                 <h3 className="font-black text-gray-900 uppercase text-xs tracking-widest">Book Info</h3>
                  <input value={formBookTitle} onChange={e => setFormBookTitle(e.target.value)} className="w-full p-3 border border-gray-200 bg-white text-gray-900 rounded-xl font-bold text-sm outline-none focus:border-coral" placeholder="Book Title" />
-                 <div className="flex gap-2">{['A1','A2','B1','B2','C1'].map(l => <button key={l} onClick={() => setSelectedLevel(l)} className={`flex-1 py-2 rounded-lg font-bold text-xs ${selectedLevel === l ? 'bg-coral text-white' : 'bg-gray-50'}`}>{l}</button>)}</div>
+                 <div className="flex gap-2">{['Pre-A1','A1','A2','B1','B2','C1'].map(l => <button key={l} onClick={() => setSelectedLevel(l)} className={`flex-1 py-2 rounded-lg font-bold text-xs ${selectedLevel === l ? 'bg-coral text-white' : 'bg-gray-50'}`}>{l}</button>)}</div>
               </div>
               
               <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
