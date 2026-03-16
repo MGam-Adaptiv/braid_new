@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import { useStudio, CombinedContent } from '../../context/StudioContext';
 import { useAuth } from '../../context/AuthContext';
 import { readPage, ExtractionResult } from '../../services/mistralService';
-import { extractTextFromImage } from '../../services/ocrService';
 import { saveMaterial, getMaterials, recordMaterialUsage } from '../../services/firestoreService';
 import { addCustomPublisher } from '../../services/userService';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -107,12 +106,13 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
   const handleFiles = useCallback(async (files: FileList | null) => { if (!files?.length) return; const remaining = 5 - pages.length; if (remaining <= 0) return toast.error('Max 5 pages'); setIsLoading(true); try { const newPages: PageItem[] = []; for (const file of Array.from(files).slice(0, remaining)) { const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'); const blobUrl = isPDF ? await convertPDFToImage(file) : URL.createObjectURL(file); newPages.push({ id: Math.random().toString(36).substr(2, 9), blobUrl, isTagged: false, unitTags: [], labelTags: [], analysisCached: false, isDirty: true }); } setPages(p => [...p, ...newPages]); if (stage === 'IDLE') { setStage('TAGGING'); setWorkflowStage('tagging'); } } catch (err) { console.error(err); } finally { setIsLoading(false); } }, [pages.length, stage, setWorkflowStage]);
 
   const handleSaveAndContinue = async () => {
+    if (!user) return;
     if (formPublisher === 'Other...' && customPublisher.trim() && user) { await addCustomPublisher(user.uid, customPublisher.trim()); }
     setWorkflowStage('extracting'); setStage('ANALYZING');
     const updatedPages = [...pages];
     const analyses: ExtractionResult[] = [];
     const finalPublisher = formPublisher === 'Other...' ? customPublisher : formPublisher;
-    for (let i = 0; i < pages.length; i++) { const result = await readPage(updatedPages[i].blobUrl); if (!result.error) { analyses.push(result); updatedPages[i] = { ...updatedPages[i], analysis: result, analysisCached: true, isDirty: false, isTagged: true, tagInfo: { publisher: finalPublisher, bookTitle: formBookTitle } }; } }
+    for (let i = 0; i < pages.length; i++) { const result = await readPage(updatedPages[i].blobUrl, user.uid); if (!result.error) { analyses.push(result); updatedPages[i] = { ...updatedPages[i], analysis: result, analysisCached: true, isDirty: false, isTagged: true, tagInfo: { publisher: finalPublisher, bookTitle: formBookTitle } }; } }
     setPages(updatedPages);
     const vocabSet = new Set<string>(); analyses.forEach(e => e.vocabulary?.items?.forEach(v => vocabSet.add(v)));
     const grammarSet = new Set<string>(); analyses.forEach(e => e.grammar?.points?.forEach(g => grammarSet.add(g)));
