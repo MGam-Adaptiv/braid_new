@@ -69,7 +69,7 @@ const handler: Handler = async (event, context) => {
     const client = new Mistral({ apiKey });
 
     const chatResponse = await client.chat.complete({
-      model: 'mistral-medium-latest',
+      model: 'mistral-small-latest',
       messages: [
         {
           role: 'system',
@@ -114,7 +114,7 @@ CRITICAL: You MUST output in this EXACT structure with these EXACT markers:
       promptTokens: usage.promptTokens,
       completionTokens: usage.completionTokens,
       totalTokens: usage.totalTokens || (usage.promptTokens + usage.completionTokens),
-      model: 'mistral-medium-latest'
+      model: 'mistral-small-latest'
     };
 
     return {
@@ -134,3 +134,4 @@ CRITICAL: You MUST output in this EXACT structure with these EXACT markers:
 };
 
 export { handler };
+
