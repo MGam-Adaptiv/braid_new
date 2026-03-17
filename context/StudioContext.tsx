@@ -116,8 +116,13 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       .trim();
 
   const buildWorkbenchItem = (id: string, rawContent: string): WorkbenchItem => {
+    // Try standard ---TITLE--- format first
     const titleMatch = rawContent.match(/---TITLE---\s*([\s\S]*?)(?=---)/i);
-    const rawTitle = titleMatch ? titleMatch[1].trim() : 'Draft Activity';
+    const fromMarker = titleMatch?.[1]?.trim();
+    // Fallback: AI sometimes skips TITLE marker and uses ---Actual Title--- directly
+    const firstBlockMatch = rawContent.match(/^---([^-\n][^\n]{2,}?)---/m);
+    const fromFirstBlock = firstBlockMatch?.[1]?.trim();
+    const rawTitle = (fromMarker && fromMarker.toUpperCase() !== 'TITLE') ? fromMarker : (fromFirstBlock || 'Draft Activity');
     const typeMatch = rawContent.match(/---TYPE:\s*([A-Z\s]+)---/i);
     const actType = typeMatch ? typeMatch[1].trim() : '';
     const bookMatch = sources[0]?.title || '';
