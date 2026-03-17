@@ -431,7 +431,7 @@ export const getResponsesForMagicLink = async (magicLinkId: string) => {
 
 // === MATERIALS MANAGEMENT ===
 
-export const saveMaterial = async (teacherId: string, materialData: { title: string; publisher: string; bookTitle: string; unitTags: string[]; labelTags: string[]; vocabulary: string[]; grammar: string[]; topic: string; level: string; pageCount: number; ocrTexts?: string[]; pageNumbers?: (number | null)[]; }): Promise<string> => {
+export const saveMaterial = async (teacherId: string, materialData: { title: string; publisher: string; bookTitle: string; unitTags: string[]; labelTags: string[]; vocabulary: string[]; coreVocabulary?: string[]; secondaryVocabulary?: string[]; grammar: string[]; topic: string; level: string; pageCount: number; ocrTexts?: string[]; pageNumbers?: (number | null)[]; }): Promise<string> => {
   try {
     const payload = {
       teacherId,
@@ -441,6 +441,8 @@ export const saveMaterial = async (teacherId: string, materialData: { title: str
       unitTags: materialData.unitTags || [],
       labelTags: materialData.labelTags || [],
       vocabulary: materialData.vocabulary || [],
+      coreVocabulary: materialData.coreVocabulary || [],
+      secondaryVocabulary: materialData.secondaryVocabulary || [],
       grammar: materialData.grammar || [],
       topic: materialData.topic || '',
       level: materialData.level || 'B1',
