@@ -141,7 +141,8 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
         unitTags: pages.flatMap(p => p.unitTags), labelTags: saveMaterialLabels,
         vocabulary: [...coreVocab, ...secondaryVocab], grammar: [...coreGrammar, ...secondaryGrammar],
         topic: editedTopic, level: selectedLevel, pageCount: pages.length,
-        ocrTexts: pages.map(p => p.analysis?.readingText?.content || '')
+        ocrTexts: pages.map(p => p.analysis?.readingText?.content || ''),
+        pageNumbers: pages.map(p => p.analysis?.pageNumber ?? null)
       };
       await saveMaterial(user.uid, materialData);
       setMaterialSaved(true);
