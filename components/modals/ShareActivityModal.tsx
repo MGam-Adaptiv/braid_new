@@ -145,20 +145,24 @@ export const ShareActivityModal: React.FC<ShareActivityModalProps> = ({
 
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer">
-              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${collectName ? 'bg-coral border-coral' : 'border-gray-300'}`}>
-                {collectName && <Check size={12} className="text-white" />}
-              </div>
-              <input type="checkbox" className="hidden" checked={collectName} onChange={e => setCollectName(e.target.checked)} />
-              <span className="text-[10px] font-black uppercase text-gray-600">Collect Student Name</span>
-            </label>
-            <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer">
-              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${showResults ? 'bg-coral border-coral' : 'border-gray-300'}`}>
-                {showResults && <Check size={12} className="text-white" />}
-              </div>
-              <input type="checkbox" className="hidden" checked={showResults} onChange={e => setShowResults(e.target.checked)} />
-              <span className="text-[10px] font-black uppercase text-gray-600">Show Results Instantly</span>
-            </label>
+            {!isNonInteractive && (
+              <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer">
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${collectName ? 'bg-coral border-coral' : 'border-gray-300'}`}>
+                  {collectName && <Check size={12} className="text-white" />}
+                </div>
+                <input type="checkbox" className="hidden" checked={collectName} onChange={e => setCollectName(e.target.checked)} />
+                <span className="text-[10px] font-black uppercase text-gray-600">Collect Student Name</span>
+              </label>
+            )}
+            {!isNonInteractive && (
+              <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer">
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${showResults ? 'bg-coral border-coral' : 'border-gray-300'}`}>
+                  {showResults && <Check size={12} className="text-white" />}
+                </div>
+                <input type="checkbox" className="hidden" checked={showResults} onChange={e => setShowResults(e.target.checked)} />
+                <span className="text-[10px] font-black uppercase text-gray-600">Show Results Instantly</span>
+              </label>
+            )}
             <label className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl cursor-pointer">
               <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${includeNotes ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}>
                 {includeNotes && <Check size={12} className="text-white" />}
