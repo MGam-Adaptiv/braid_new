@@ -14,6 +14,7 @@ export const SignUpPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Custom alert state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -41,6 +42,11 @@ export const SignUpPage: React.FC = () => {
     
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    if (!agreedToTerms) {
+      setError("Please agree to the Terms & Conditions and Privacy Policy to continue.");
       return;
     }
 
@@ -146,9 +152,24 @@ export const SignUpPage: React.FC = () => {
               <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" className="w-full h-[54px] px-5 bg-white border border-[#E5E7EB] rounded-xl text-base focus:border-coral outline-none transition-all" />
             </div>
 
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-coral cursor-pointer shrink-0"
+              />
+              <span className="text-[11px] font-bold text-gray-500 leading-relaxed">
+                I have read and agree to the{' '}
+                <Link to="/terms" target="_blank" className="text-coral hover:underline">Terms & Conditions</Link>
+                {' '}and{' '}
+                <Link to="/privacy" target="_blank" className="text-coral hover:underline">Privacy Policy</Link>
+              </span>
+            </label>
+
             {error && <div className="text-[11px] font-black text-coral text-center py-2 animate-in fade-in">{error}</div>}
 
-            <button type="submit" disabled={isSigningUp} className="w-full bg-black text-white h-[56px] rounded-xl font-black text-[13px] tracking-widest uppercase flex items-center justify-center gap-2.5 transition-all disabled:opacity-50">
+            <button type="submit" disabled={isSigningUp || !agreedToTerms} className="w-full bg-black text-white h-[56px] rounded-xl font-black text-[13px] tracking-widest uppercase flex items-center justify-center gap-2.5 transition-all disabled:opacity-50">
               {isSigningUp ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : "CREATE ACCOUNT"}
             </button>
           </form>
