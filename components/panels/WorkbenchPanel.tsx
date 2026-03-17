@@ -133,7 +133,7 @@ const parseActivityContent = (rawContent: string) => {
   if (aKeyMatch) answerKey = aKeyMatch[1].trim();
 
   // 2. Extract Metadata (Title/Type)
-  const titleMatch = rawContent.match(/---TITLE---[\s\S]*?:?\s*([\s\S]*?)(?=---)/i);
+  const titleMatch = rawContent.match(/---TITLE---\s*([\s\S]*?)(?=---)/i);
   if (titleMatch) {
     title = titleMatch[1]
       .replace(/<\/?[^>]+(>|$)/g, '') // strip HTML
@@ -593,24 +593,6 @@ export const WorkbenchPanel: React.FC = () => {
     <div className={containerClass}>
       {/* 1. HEADER (Two Rows) */}
       <div className="bg-white border-b border-gray-200 shrink-0 shadow-sm z-[60]">
-        {/* BREADCRUMB */}
-        <div className="px-6 pt-2.5 pb-0 flex items-center gap-1.5">
-          <button
-            onClick={() => navigate('/activities')}
-            className="text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-coral transition-colors"
-          >
-            My Activities
-          </button>
-          <span className="text-[9px] text-gray-300 font-bold">›</span>
-          <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
-            {combinedExtraction?.allTags?.bookTitle || (activeItem as any)?.source?.bookTitle || 'Studio'}
-          </span>
-          <span className="text-[9px] text-gray-300 font-bold">›</span>
-          <span className="text-[9px] font-black text-coral uppercase tracking-widest truncate max-w-[200px]">
-            {parsed?.title || 'Draft'}
-          </span>
-        </div>
-
         {/* ROW 1: Info */}
         <div className="px-6 py-3 flex items-center justify-between border-b border-gray-100">
           <div className="flex items-center gap-3">
