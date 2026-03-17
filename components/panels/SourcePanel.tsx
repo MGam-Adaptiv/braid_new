@@ -70,6 +70,7 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
   // Custom Input States
   const [newVocabInput, setNewVocabInput] = useState('');
   const [newGrammarInput, setNewGrammarInput] = useState('');
+  const [showReadingVocab, setShowReadingVocab] = useState(false);
   
   const [editedTopic, setEditedTopic] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('A1');
@@ -122,9 +123,14 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
       return;
     }
 
-    const vocabSet = new Set<string>(); analyses.forEach(e => e.vocabulary?.items?.forEach(v => vocabSet.add(v)));
+    // Use AI two-tier vocab if available, fall back to legacy flat list split
+    const targetItems = analyses.flatMap(e => e.targetVocabulary?.items || e.vocabulary?.items?.slice(0, 20) || []);
+    const contextItems = analyses.flatMap(e => e.contextVocabulary?.items || e.vocabulary?.items?.slice(20) || []);
+    const coreSet = new Set(targetItems);
+    const secondarySet = new Set(contextItems.filter(w => !coreSet.has(w)));
+    setCoreVocab(Array.from(coreSet));
+    setSecondaryVocab(Array.from(secondarySet));
     const grammarSet = new Set<string>(); analyses.forEach(e => e.grammar?.points?.forEach(g => grammarSet.add(g)));
-    setCoreVocab(Array.from(vocabSet).slice(0, 20)); setSecondaryVocab(Array.from(vocabSet).slice(20));
     setCoreGrammar(Array.from(grammarSet).slice(0, 5)); setSecondaryGrammar(Array.from(grammarSet).slice(5));
     setEditedTopic(analyses[0]?.topic || 'General English'); setSelectedLevel(analyses[0]?.estimatedLevel || 'A1');
     setStage('CONFIRMING');
@@ -139,6 +145,8 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
         title: saveMaterialTitle || `${formBookTitle} - ${new Date().toLocaleDateString()}`,
         publisher: finalPublisher, bookTitle: formBookTitle,
         unitTags: pages.flatMap(p => p.unitTags), labelTags: saveMaterialLabels,
+        coreVocabulary: coreVocab,
+        secondaryVocabulary: secondaryVocab,
         vocabulary: [...coreVocab, ...secondaryVocab], grammar: [...coreGrammar, ...secondaryGrammar],
         topic: editedTopic, level: selectedLevel, pageCount: pages.length,
         ocrTexts: pages.map(p => p.analysis?.readingText?.content || ''),
@@ -295,9 +303,10 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
               </div>
               
               <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
-                 <h3 className="font-black text-gray-900 uppercase text-xs tracking-widest mb-4">Vocabulary ({coreVocab.length})</h3>
+                 <h3 className="font-black text-gray-900 uppercase text-xs tracking-widest mb-1">Core Vocabulary ({coreVocab.length})</h3>
+                 <p className="text-[10px] text-gray-400 font-medium mb-4">Target language explicitly taught on this page</p>
                  <div className="flex gap-2 mb-3">
-                    <input 
+                    <input
                       value={newVocabInput}
                       onChange={(e) => setNewVocabInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && addCustomVocab()}
@@ -309,7 +318,22 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
                  <div className="flex flex-wrap gap-2">
                     {coreVocab.map(v => <button key={v} onClick={() => { setCoreVocab(p => p.filter(x => x !== v)); setSecondaryVocab(p => [...p, v]); }} className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-red-50 hover:text-red-500">{v} ✕</button>)}
                  </div>
-                 {secondaryVocab.length > 0 && <div className="mt-4 pt-4 border-t border-gray-100"><p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Available</p><div className="flex flex-wrap gap-2">{secondaryVocab.map(v => <button key={v} onClick={() => { setSecondaryVocab(p => p.filter(x => x !== v)); setCoreVocab(p => [...p, v]); }} className="px-3 py-1.5 bg-gray-50 text-gray-500 rounded-lg text-xs font-bold hover:bg-blue-50 hover:text-blue-600">{v} +</button>)}</div></div>}
+                 {secondaryVocab.length > 0 && (
+                   <div className="mt-4 pt-4 border-t border-gray-100">
+                     <button
+                       onClick={() => setShowReadingVocab(v => !v)}
+                       className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors w-full text-left"
+                     >
+                       <span>{showReadingVocab ? '▲' : '▼'} Reading Vocabulary ({secondaryVocab.length})</span>
+                       <span className="text-[9px] normal-case font-medium text-gray-300">— tap to promote to core</span>
+                     </button>
+                     {showReadingVocab && (
+                       <div className="flex flex-wrap gap-2 mt-3">
+                         {secondaryVocab.map(v => <button key={v} onClick={() => { setSecondaryVocab(p => p.filter(x => x !== v)); setCoreVocab(p => [...p, v]); }} className="px-3 py-1.5 bg-gray-50 text-gray-500 rounded-lg text-xs font-bold hover:bg-blue-50 hover:text-blue-600">{v} +</button>)}
+                       </div>
+                     )}
+                   </div>
+                 )}
               </div>
 
               <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
