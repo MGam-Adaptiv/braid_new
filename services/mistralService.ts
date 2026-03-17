@@ -2,7 +2,9 @@ import { SourceMaterial, WorkbenchItem, InteractiveData } from "../types";
 import { trackTokenUsage } from './tokenService';
 
 export interface ExtractionResult {
-  vocabulary?: { items: string[] };
+  targetVocabulary?: { items: string[] };
+  contextVocabulary?: { items: string[] };
+  vocabulary?: { items: string[] }; // legacy fallback
   grammar?: { points: string[] };
   topic?: string;
   estimatedLevel?: string;
@@ -25,18 +27,27 @@ const blobUrlToBase64 = async (blobUrl: string): Promise<string> => {
   });
 };
 
-const cleanAnalysis = (rawResult: ExtractionResult): ExtractionResult => {
+const cleanVocabItems = (items: string[]): string[] => {
   const bannedWords = new Set(['match', 'circle', 'read', 'write', 'look', 'find', 'choose', 'listen', 'complete', 'underline', 'something', 'someone', 'near', 'far']);
+  const seen = new Set<string>();
+  return items
+    .map((v: string) => v.toLowerCase().trim())
+    .filter((v: string) => {
+      if (!v || bannedWords.has(v) || seen.has(v)) return false;
+      seen.add(v);
+      return true;
+    });
+};
 
+const cleanAnalysis = (rawResult: ExtractionResult): ExtractionResult => {
+  if (rawResult.targetVocabulary?.items) {
+    rawResult.targetVocabulary.items = cleanVocabItems(rawResult.targetVocabulary.items);
+  }
+  if (rawResult.contextVocabulary?.items) {
+    rawResult.contextVocabulary.items = cleanVocabItems(rawResult.contextVocabulary.items);
+  }
   if (rawResult.vocabulary?.items) {
-    const seen = new Set();
-    rawResult.vocabulary.items = rawResult.vocabulary.items
-      .map((v: string) => v.toLowerCase().trim())
-      .filter((v: string) => {
-        if (!v || bannedWords.has(v) || seen.has(v)) return false;
-        seen.add(v);
-        return true;
-      });
+    rawResult.vocabulary.items = cleanVocabItems(rawResult.vocabulary.items);
   }
 
   if (rawResult.grammar?.points) {
@@ -232,3 +243,4 @@ export const convertToInteractive = async (
     return null;
   }
 };
+
