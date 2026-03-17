@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Copy, Check, FileText, Play, ChevronDown, Plus, RefreshCw } from 'lucide-react';
 import { Activity, ClassTag } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { createMagicLink, getClassTags, getMagicLinksForActivity } from '../../services/firestoreService';
+import { createMagicLink, getClassTags, getMagicLinksForActivity, updateActivity } from '../../services/firestoreService';
+import { convertToInteractive } from '../../services/mistralService';
 import toast from 'react-hot-toast';
 
 interface ShareActivityModalProps {
@@ -52,7 +53,7 @@ export const ShareActivityModal: React.FC<ShareActivityModalProps> = ({
       const links = await getMagicLinksForActivity(activity.id);
       if (links && links.length > 0) {
         const link = links[0] as any;
-        setMagicLinkUrl(`https://braidstudio.netlify.app/#/test/${link.id}`);
+        setMagicLinkUrl(`https://braid.studio/#/test/${link.id}`);
       }
     } catch (err) {
       console.error(err);
@@ -63,8 +64,18 @@ export const ShareActivityModal: React.FC<ShareActivityModalProps> = ({
     if (!user || !activity) return;
     setIsCreating(true);
     try {
+      // Auto-generate interactive data if missing
+      let activityToShare = activity;
+      if (!isNonInteractive && !activity.interactiveData?.questions?.length) {
+        const interactiveResult = await convertToInteractive(activity.studentContent, activity.answerKey || '', user.uid);
+        if (interactiveResult?.questions?.length > 0) {
+          await updateActivity(activity.id, { interactiveData: interactiveResult });
+          activityToShare = { ...activity, interactiveData: interactiveResult };
+        }
+      }
+
       const selectedClass = classes.find(c => c.id === selectedClassId);
-      const link = await createMagicLink(user.uid, activity.id, {
+      const link = await createMagicLink(user.uid, activityToShare.id, {
         mode: 'test',
         collectName,
         showAnswers: showResults,
@@ -73,7 +84,7 @@ export const ShareActivityModal: React.FC<ShareActivityModalProps> = ({
         includeNotes,
         includeKey
       });
-      setMagicLinkUrl(`https://braidstudio.netlify.app/#/test/${link.id}`);
+      setMagicLinkUrl(`https://braid.studio/#/test/${link.id}`);
       toast.success('Magic link created!');
     } catch (err) {
       toast.error('Failed to create link');
