@@ -13,6 +13,8 @@ import { LandingPage } from './pages/LandingPage';
 import UserProfilePage from './pages/UserProfilePage';
 import { LoginPage } from './pages/LoginPage';
 import { SignUpPage } from './pages/SignUpPage';
+import { TermsPage } from './pages/TermsPage';
+import { PrivacyPage } from './pages/PrivacyPage';
 import { TestPage } from './pages/TestPage';
 import { RestoreAccountPage } from './pages/RestoreAccountPage';
 import { createUserProfile, getUserProfile } from './services/userService';
@@ -72,6 +74,8 @@ const AppContent = () => {
         <Route path="/test/:id" element={<TestPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
 
         {/* ACCOUNT RESTORATION - Intercept page */}
         <Route path="/restore-account" element={<RestoreAccountPage />} />
