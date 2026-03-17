@@ -82,7 +82,14 @@ const handler: Handler = async (event, context) => {
               text: `You are an expert ELT (English Language Teaching) coursebook analyst. Read this page thoroughly to identify target language.
 
 VOCABULARY:
-List useful content words and phrases found (20-40 items). Include nouns, verbs, adjectives, adverbs, collocations, and topic-specific phrases. Do NOT include pronouns (I, he, she, they, her, his, its, my, our, their, your), articles (a, an, the), or prepositions — these are grammar items, not vocabulary.
+List useful content words and phrases found (20-40 items). Include nouns, verbs, adjectives, adverbs, collocations, and topic-specific phrases that students are expected to learn.
+
+Do NOT include:
+- Pronouns (I, he, she, they, her, his, its, my, our, their, your), articles (a, an, the), or prepositions — these are grammar items
+- Exercise instruction words or rubric meta-language — words that label or describe the exercise itself, such as: vocabulary, grammar, reading, writing, listening, speaking, topic, theme, phrases, words, sentences, text, lesson, unit, activity, task, exercise, example, opposites, match, complete, circle, tick, underline, look, listen, repeat, choose, write, answer, question, dialogue, role-play, discuss, guess, find, label, describe, check, practise, review, remember, learn, study, focus, note, tip, use, read, say, ask, tell, think, work, pair, group
+- Section headings or page labels (e.g. "Vocabulary", "Reading Text", "Theme-related words", "Lexical items", "Task types", "Word list")
+
+Only include words that a student would add to their vocabulary notebook as new language to learn.
 
 GRAMMAR:
 Identify target grammar points (e.g., "Present Simple", "Possessive Adjectives", "Prepositions of time").
@@ -103,6 +110,9 @@ Base your level decision strictly on what grammar and vocabulary is actually pre
 TOPIC:
 Identify the communicative theme.
 
+PAGE NUMBER:
+Read the page number printed on the page (usually bottom-left, bottom-right, or top corner). Return the integer only. Return null if not visible or if this is a cover/intro page with no number.
+
 Return ONLY valid JSON:
 {
   "vocabulary": { "items": ["..."], "count": 30, "confidence": "high" },
@@ -112,7 +122,8 @@ Return ONLY valid JSON:
   "estimatedLevel": "A1",
   "levelConfidence": "high",
   "levelReasoning": "Brief explanation of level choice based on grammar and vocabulary observed",
-  "pageType": "mixed"
+  "pageType": "mixed",
+  "pageNumber": 34
 }`,
             },
           ],
@@ -164,3 +175,4 @@ Return ONLY valid JSON:
 };
 
 export { handler };
+
