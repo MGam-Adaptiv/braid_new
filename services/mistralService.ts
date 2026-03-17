@@ -7,6 +7,7 @@ export interface ExtractionResult {
   topic?: string;
   estimatedLevel?: string;
   readingText?: { content: string; present: boolean; confidence: string; type: string };
+  pageNumber?: number | null;
   error?: boolean;
 }
 
@@ -70,19 +71,24 @@ export const readPage = async (blobUrl: string, userId: string): Promise<Extract
     });
 
     if (!response.ok) {
-      throw new Error(`Analysis failed with status: ${response.status}`);
+      let errBody = '';
+      try { errBody = await response.text(); } catch (_) {}
+      console.error(`[readPage] HTTP ${response.status} from ai-read-page. Body:`, errBody);
+      throw new Error(`Analysis failed with status: ${response.status} — ${errBody}`);
     }
 
     const rawResult = await response.json();
-    
+
     if (rawResult.tokensUsed) {
       await trackTokenUsage(userId, rawResult.tokensUsed, 'extraction');
     }
 
     return cleanAnalysis(rawResult);
 
-  } catch (error) {
-    console.error("Error reading page:", error);
+  } catch (error: any) {
+    console.error("[readPage] Scan failed:", error?.message || error);
+    // Surface the URL being called so it's easy to spot routing issues
+    console.error("[readPage] Target URL: /.netlify/functions/ai-read-page (resolved from", window.location.origin, ")");
     return { error: true };
   }
 };
