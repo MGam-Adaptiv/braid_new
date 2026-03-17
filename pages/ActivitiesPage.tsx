@@ -430,12 +430,18 @@ export const ActivitiesPage: React.FC = () => {
   const draftActivities = sortedActivities.filter(a => a.status === 'draft');
   const publishedActivities = sortedActivities.filter(a => a.status !== 'draft');
 
+  // Normalise book title for grouping — treats "Luke And Myla 3" and "Luke & Myla 3" as the same
+  const normaliseBookTitle = (title: string) =>
+    title.replace(/\band\b/gi, '&').replace(/\s+/g, ' ').trim();
+
   // Group published activities by book title for organised display
   const publishedByBook = useMemo(() => {
     const groups: Record<string, typeof publishedActivities> = {};
+    const displayTitle: Record<string, string> = {};
     publishedActivities.forEach(a => {
-      const bookKey = a.source?.bookTitle || 'Custom / No Book';
-      if (!groups[bookKey]) groups[bookKey] = [];
+      const raw = a.source?.bookTitle || 'Custom / No Book';
+      const bookKey = normaliseBookTitle(raw);
+      if (!groups[bookKey]) { groups[bookKey] = []; displayTitle[bookKey] = raw; }
       groups[bookKey].push(a);
     });
     // Sort groups: books with most activities first, then Custom last
