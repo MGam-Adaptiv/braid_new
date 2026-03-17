@@ -258,22 +258,23 @@ const TeacherNotesSection = ({
   );
 };
 
-const StudentContentSection = ({ 
-  parsed, 
-  contentRef, 
-  titleRef, 
-  isEditing 
+const StudentContentSection = ({
+  parsed,
+  contentRef,
+  titleRef,
+  isEditing,
+  activityTitle
 }: any) => {
   return (
     <div className={`w-full max-w-[850px] bg-white shadow-xl shadow-gray-200/60 border border-gray-200 rounded-sm relative flex flex-col transition-all ${isEditing ? 'ring-4 ring-coral/5' : ''}`}>
       <div className="px-16 pt-16 pb-8 border-b border-gray-100 mb-8 text-center relative">
-        <h1 
-          ref={titleRef} 
-          contentEditable={isEditing} 
-          suppressContentEditableWarning 
+        <h1
+          ref={titleRef}
+          contentEditable={isEditing}
+          suppressContentEditableWarning
           className={`text-4xl font-black text-gray-900 uppercase tracking-tighter mb-2 outline-none ${isEditing ? 'border-b-2 border-gray-200 hover:border-coral transition-colors' : ''}`}
         >
-          {parsed.title}
+          {activityTitle || parsed.title}
         </h1>
         <div className="flex justify-center gap-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
           <span>Student Worksheet</span>
@@ -605,7 +606,7 @@ export const WorkbenchPanel: React.FC = () => {
               {combinedExtraction?.allTags?.unitTags?.[0] && ` • ${combinedExtraction.allTags.unitTags[0]}`}
             </span>
           </div>
-          <div className="text-sm font-black text-gray-900">{parsed.title}</div>
+          <div className="text-sm font-black text-gray-900">{activeItem?.title || parsed.title}</div>
         </div>
         
         {/* ROW 2: Actions */}
@@ -667,11 +668,12 @@ export const WorkbenchPanel: React.FC = () => {
             combinedExtraction={combinedExtraction}
           />
           
-          <StudentContentSection 
-            parsed={parsed} 
-            contentRef={docRef} 
-            titleRef={titleRef} 
-            isEditing={isEditing} 
+          <StudentContentSection
+            parsed={parsed}
+            contentRef={docRef}
+            titleRef={titleRef}
+            isEditing={isEditing}
+            activityTitle={activeItem?.title}
           />
           
           <AnswerKeySection
