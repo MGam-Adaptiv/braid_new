@@ -81,15 +81,25 @@ const handler: Handler = async (event, context) => {
               type: 'text',
               text: `You are an expert ELT (English Language Teaching) coursebook analyst. Read this page thoroughly to identify target language.
 
-VOCABULARY:
-List useful content words and phrases found (20-40 items). Include nouns, verbs, adjectives, adverbs, collocations, and topic-specific phrases that students are expected to learn.
+VOCABULARY — TWO TIERS:
 
+TIER 1 — TARGET VOCABULARY (Core, explicitly taught):
+Words and phrases EXPLICITLY PRESENTED as new language on this page — appearing in vocabulary boxes, word lists, highlighted or bolded as new vocabulary, or labelled as "new words" / "key words". These are the words the lesson is specifically TEACHING. List 5–15 items maximum.
 Do NOT include:
-- Pronouns (I, he, she, they, her, his, its, my, our, their, your), articles (a, an, the), or prepositions — these are grammar items
-- Exercise instruction words or rubric meta-language — words that label or describe the exercise itself, such as: vocabulary, grammar, reading, writing, listening, speaking, topic, theme, phrases, words, sentences, text, lesson, unit, activity, task, exercise, example, opposites, match, complete, circle, tick, underline, look, listen, repeat, choose, write, answer, question, dialogue, role-play, discuss, guess, find, label, describe, check, practise, review, remember, learn, study, focus, note, tip, use, read, say, ask, tell, think, work, pair, group
-- Section headings or page labels (e.g. "Vocabulary", "Reading Text", "Theme-related words", "Lexical items", "Task types", "Word list")
+- Grammar terminology or tense names (e.g. "past perfect simple", "past participle", "present simple") — these belong in the Grammar section only
+- Proper nouns — character names, people's names, place names, country names, brand names
+- Dates, years (e.g. 1960s), or standalone numbers
 
-Only include words that a student would add to their vocabulary notebook as new language to learn.
+TIER 2 — CONTEXT VOCABULARY (Incidental, from reading/exercises):
+Words from reading texts, dialogues, listening scripts, or exercise content that students encounter but are NOT the main teaching focus. Do NOT include:
+- Wrong-answer distractors from multiple choice exercises — only the correct answer options
+- Pronouns (I, he, she, they, her, his, its, my, our, their, your), articles (a, an, the), or prepositions
+- Exercise instruction words (match, complete, circle, tick, underline, look, listen, repeat, choose, write, answer, discuss, guess, find, label, describe, check, practise, review, remember, learn, study, read, say, ask, tell, think, work)
+- Section headings or page labels (e.g. "Vocabulary", "Reading Text", "Word list", "Grammar", "Topic")
+- Grammar terminology or tense names
+- Proper nouns — character names, people's names, place names, country names, brand names
+- Dates, years, or standalone numbers
+List 5–20 items maximum.
 
 GRAMMAR:
 Identify target grammar points (e.g., "Present Simple", "Possessive Adjectives", "Prepositions of time").
@@ -115,7 +125,8 @@ Read the page number printed on the page (usually bottom-left, bottom-right, or 
 
 Return ONLY valid JSON:
 {
-  "vocabulary": { "items": ["..."], "count": 30, "confidence": "high" },
+  "targetVocabulary": { "items": ["..."], "count": 8 },
+  "contextVocabulary": { "items": ["..."], "count": 12 },
   "grammar": { "points": ["..."], "count": 2, "confidence": "high" },
   "readingText": { "content": "passage text", "present": true, "title": "Heading", "confidence": "high" },
   "topic": "...",
