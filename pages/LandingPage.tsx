@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Logo } from '../components/Logo';
 import { BraidAnimation } from '../components/BraidAnimation';
@@ -158,9 +158,9 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
           <Logo size="sm" layout="horizontal" />
           <div className="flex items-center gap-10 text-[10px] font-black uppercase tracking-widest text-gray-400">
-            <a href="#" className="hover:text-coral transition-colors">Privacy Codex</a>
-            <a href="#" className="hover:text-coral transition-colors">Terms of Service</a>
-            <a href="mailto:info@braidstudio.getadaptiv.com" className="hover:text-coral transition-colors">Partner Support</a>
+            <Link to="/privacy" className="hover:text-coral transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-coral transition-colors">Terms of Service</Link>
+            <a href="mailto:info@getadaptiv.com" className="hover:text-coral transition-colors">Partner Support</a>
           </div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-300">
             © 2025 ADAPTIV PERSONALIZED LEARNING
