@@ -100,7 +100,7 @@ const MaterialCard: React.FC<MaterialCardProps> = ({
       <div className="flex flex-wrap gap-3 mb-3">
         <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500">
           <Sparkles size={12} className="text-coral" />
-          <span>{material.vocabulary?.length || 0} vocab</span>
+          <span>{material.coreVocabulary?.length ?? material.vocabulary?.length ?? 0} vocab</span>
         </div>
         <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500">
           <PenTool size={12} className="text-amber-500" />
