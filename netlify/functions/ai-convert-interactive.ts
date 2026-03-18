@@ -126,7 +126,7 @@ ${answerKey}
 `;
 
     const chatResponse = await client.chat.complete({
-      model: 'mistral-medium-latest',
+      model: 'mistral-small-latest',
       messages: [
         {
           role: 'system',
