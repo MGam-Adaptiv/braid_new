@@ -286,20 +286,21 @@ export const deleteClassTag = async (tagId: string) => {
 
 // MAGIC LINKS & RESPONSES
 export const createMagicLink = async (
-  userId: string, 
-  activityId: string, 
-  config: { 
-    mode: string, 
-    collectName: boolean, 
-    showAnswers: boolean, 
-    classTagId?: string | null, 
+  userId: string,
+  activityId: string,
+  config: {
+    mode: string,
+    collectName: boolean,
+    showAnswers: boolean,
+    classTagId?: string | null,
     classTagName?: string | null,
     includeNotes?: boolean,
     includeKey?: boolean
-  }
+  },
+  activityData?: any
 ) => {
   try {
-    const activity = await getActivity(activityId);
+    const activity = activityData || await getActivity(activityId);
     if (!activity) throw new Error('Activity not found');
 
     // Always snapshot the activity content into the magic link document.
