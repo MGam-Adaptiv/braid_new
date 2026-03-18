@@ -63,6 +63,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userRef = db.collection('users').doc(res.user.uid);
         const docSnap = await userRef.get();
         if (!docSnap.exists) {
+          // Guard against duplicate: check if email already exists under a different UID
+          const emailQuery = await db.collection('users')
+            .where('email', '==', res.user.email)
+            .limit(1)
+            .get();
+          if (!emailQuery.empty) {
+            // An email/password account already exists for this email — sign out and surface error
+            await auth.signOut();
+            throw {
+              code: 'auth/account-exists-with-different-credential',
+              message: 'An account already exists with this email address. Please sign in with your email and password instead.'
+            };
+          }
           await userRef.set({
             name: res.user.displayName || 'User',
             email: res.user.email || '',
