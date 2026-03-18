@@ -132,8 +132,9 @@ export default function UserDetailPanel({ user, onClose, onUpdate }: UserDetailP
         const data = await res.json();
         const isAlreadyGone = data.error?.includes('user-not-found') || data.error?.includes('no user record');
         if (!isAlreadyGone) throw new Error('Auth deletion failed');
+        // Auth user was already gone — still clean up Firestore document
+        await db.collection('users').doc(user.uid).delete();
       }
-      await db.collection('users').doc(user.uid).delete();
       toast.success('User permanently deleted');
       onClose();
       onUpdate();
