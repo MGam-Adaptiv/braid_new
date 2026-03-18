@@ -83,7 +83,7 @@ export const ShareActivityModal: React.FC<ShareActivityModalProps> = ({
         classTagName: selectedClass?.name || null,
         includeNotes,
         includeKey
-      });
+      }, activityToShare);
       setMagicLinkUrl(`https://braid.studio/#/test/${link.id}`);
       toast.success('Magic link created!');
     } catch (err) {
