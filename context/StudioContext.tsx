@@ -84,6 +84,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [activityConfig, setActivityConfig] = useState<{ questionCount: number; questionFormat: string }>({ questionCount: 10, questionFormat: 'mixed' });
   const [pendingDraftType, setPendingDraftType] = useState<string | null>(null);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  const [lastDraftPrompt, setLastDraftPrompt] = useState<string>('');
 
   const addToWorkbench = (item: WorkbenchItem) => {
     setWorkbench(prev => [item, ...prev]);
@@ -115,7 +116,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       .replace(/`(.+?)`/g, '$1')
       .trim();
 
-  const buildWorkbenchItem = (id: string, rawContent: string): WorkbenchItem => {
+  const buildWorkbenchItem = (id: string, rawContent: string, userPrompt?: string): WorkbenchItem => {
     // Try standard ---TITLE--- format first
     const titleMatch = rawContent.match(/---TITLE---\s*([\s\S]*?)(?=---)/i);
     const fromMarker = titleMatch?.[1]?.trim();
@@ -126,6 +127,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const typeMatch = rawContent.match(/---TYPE:\s*([A-Z\s]+)---/i);
     const actType = typeMatch ? typeMatch[1].trim() : '';
     const bookMatch = sources[0]?.title || '';
+    const promptLabel = userPrompt
+      ? `"${userPrompt.length > 60 ? userPrompt.slice(0, 57) + '...' : userPrompt}"`
+      : null;
     return {
       id,
       title: stripMarkdown(rawTitle),
@@ -136,7 +140,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       buildLog: [{
         timestamp: Date.now(),
         action: 'drafted' as const,
-        detail: `Draft created by AI Partner${actType ? ` · ${actType}` : ''}${bookMatch ? ` · ${bookMatch}` : ''}`,
+        detail: promptLabel
+          ? `AI draft: ${promptLabel}${bookMatch ? ` · ${bookMatch}` : ''}`
+          : `Draft created by AI Partner${actType ? ` · ${actType}` : ''}${bookMatch ? ` · ${bookMatch}` : ''}`,
         actor: 'ai' as const,
       }],
     };
@@ -150,6 +156,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Reset so the panel shows the ADD TO WORKBENCH button for the new draft
     setCurrentDraftId(null);
     setDraftContent(null);
+    setLastDraftPrompt(type === 'Custom' ? partnerInput : type);
     try {
       const result = await draftResponse(type, partnerInput, sources, workbench, user.uid, user.email, activityConfig);
       setDraftContent(result);
@@ -174,7 +181,21 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // If already sent to workbench, auto-update the existing item with the refined content
       if (currentDraftId) {
-        updateWorkbench(buildWorkbenchItem(currentDraftId, result));
+        const existingItem = workbench.find(i => i.id === currentDraftId);
+        const existingLog: any[] = (existingItem as any)?.buildLog || [];
+        const baseItem = buildWorkbenchItem(currentDraftId, result, lastDraftPrompt || undefined);
+        const refinedLabel = refinementRequest.length > 60
+          ? `"${refinementRequest.slice(0, 57)}..."`
+          : `"${refinementRequest}"`;
+        updateWorkbench({
+          ...baseItem,
+          buildLog: [...existingLog, {
+            timestamp: Date.now(),
+            action: 'refined' as const,
+            detail: `Refined: ${refinedLabel}`,
+            actor: 'teacher' as const,
+          }],
+        } as any);
         toast.success("Workbench updated!");
       } else {
         toast.success("Draft refined — send it to the Workbench when ready.");
@@ -197,7 +218,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // First send — add to workbench
     const newId = 'w-' + Math.random().toString(36).substr(2, 9);
     setCurrentDraftId(newId);
-    addToWorkbench(buildWorkbenchItem(newId, draftContent));
+    addToWorkbench(buildWorkbenchItem(newId, draftContent, lastDraftPrompt || undefined));
     toast.success("Activity added to Workbench!");
   };
 
