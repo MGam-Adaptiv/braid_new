@@ -868,7 +868,7 @@ export const AdminDashboard: React.FC = () => {
                     <p className="text-xs text-gray-400 font-medium mt-1">Activity creation over time</p>
                   </div>
                   <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height={300}>
                       <AreaChart data={growthData}>
                         <defs>
                           <linearGradient id="colorActivities" x1="0" y1="0" x2="0" y2="1">
@@ -992,7 +992,7 @@ export const AdminDashboard: React.FC = () => {
                     <div className="flex flex-col md:flex-row items-center gap-12">
                       {/* DONUT CHART */}
                       <div className="h-[300px] w-[300px] relative">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height={300}>
                           <PieChart>
                             <Pie
                               data={publisherData}
@@ -1955,7 +1955,7 @@ export const AdminDashboard: React.FC = () => {
                       {skillsData.length > 0 ? (
                         <div className="flex flex-col items-center">
                           <div className="h-[250px] w-[250px] relative mb-6">
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height={250}>
                               <PieChart>
                                 <Pie
                                   data={skillsData}
@@ -2009,7 +2009,7 @@ export const AdminDashboard: React.FC = () => {
                       {formatData.length > 0 ? (
                         <div className="flex flex-col items-center">
                           <div className="h-[250px] w-[250px] relative mb-6">
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height={250}>
                               <PieChart>
                                 <Pie
                                   data={formatData}
@@ -2069,7 +2069,7 @@ export const AdminDashboard: React.FC = () => {
                   {cefrData.some(d => d.count > 0) ? (
                     <>
                       <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height={300}>
                           <BarChart data={cefrData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                             <XAxis 
@@ -2373,6 +2373,52 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Feature Usage Charts */}
+                  {Object.keys(byOp).length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Left: Call frequency by operation */}
+                      <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Feature Usage Frequency</p>
+                        <ResponsiveContainer width="100%" height={220}>
+                          <BarChart
+                            data={Object.entries(byOp).sort((a,b)=>b[1].calls-a[1].calls).map(([op,s])=>({ name: OP_LABELS[op]||op, calls: s.calls }))}
+                            layout="vertical"
+                            margin={{ left: 8, right: 20, top: 4, bottom: 4 }}
+                          >
+                            <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={80} tickLine={false} axisLine={false} />
+                            <Tooltip formatter={(v: any) => [v, 'Calls']} contentStyle={{ fontSize: 11 }} />
+                            <Bar dataKey="calls" radius={[0, 4, 4, 0]}>
+                              {Object.entries(byOp).sort((a,b)=>b[1].calls-a[1].calls).map(([op]) => (
+                                <Cell key={op} fill={OP_COLORS[op] || '#9ca3af'} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      {/* Right: Token consumption by operation */}
+                      <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Token Consumption by Feature</p>
+                        <ResponsiveContainer width="100%" height={220}>
+                          <BarChart
+                            data={Object.entries(byOp).sort((a,b)=>b[1].tokens-a[1].tokens).map(([op,s])=>({ name: OP_LABELS[op]||op, tokens: s.tokens }))}
+                            layout="vertical"
+                            margin={{ left: 8, right: 20, top: 4, bottom: 4 }}
+                          >
+                            <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v: any) => v >= 1000 ? (v/1000).toFixed(0)+'k' : String(v)} />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={80} tickLine={false} axisLine={false} />
+                            <Tooltip formatter={(v: any) => [v.toLocaleString(), 'Tokens']} contentStyle={{ fontSize: 11 }} />
+                            <Bar dataKey="tokens" radius={[0, 4, 4, 0]}>
+                              {Object.entries(byOp).sort((a,b)=>b[1].tokens-a[1].tokens).map(([op]) => (
+                                <Cell key={op} fill={OP_COLORS[op] || '#9ca3af'} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Per-user cost table */}
                   {Object.keys(byUser).length > 0 && (
                     <div>
@@ -2412,6 +2458,34 @@ export const AdminDashboard: React.FC = () => {
                           </tbody>
                         </table>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Top Teachers by Token Usage */}
+                  {Object.keys(byUser).length > 0 && (
+                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Top Teachers by Token Usage</p>
+                      <ResponsiveContainer width="100%" height={Math.min(Object.keys(byUser).length, 10) * 40 + 20}>
+                        <BarChart
+                          data={Object.entries(byUser)
+                            .sort((a,b) => b[1].tokens - a[1].tokens)
+                            .slice(0, 10)
+                            .map(([uid, s]) => ({
+                              name: users.find((u: any) => u.uid === uid)?.email?.split('@')[0] || uid.substring(0, 8),
+                              tokens: s.tokens,
+                              calls: s.calls,
+                            }))}
+                          layout="vertical"
+                          margin={{ left: 8, right: 60, top: 4, bottom: 4 }}
+                        >
+                          <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v: any) => v >= 1000 ? (v/1000).toFixed(0)+'k' : String(v)} />
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={110} tickLine={false} axisLine={false} />
+                          <Tooltip formatter={(v: any, name: any) => [name === 'tokens' ? v.toLocaleString() : v, name === 'tokens' ? 'Tokens' : 'Calls']} contentStyle={{ fontSize: 11 }} />
+                          <Bar dataKey="tokens" fill="#EF3D5A" radius={[0, 4, 4, 0]}>
+                            <LabelList dataKey="calls" position="right" formatter={(v: any) => `${v} calls`} style={{ fontSize: 9, fill: '#9ca3af' }} />
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
                   )}
 
@@ -2661,4 +2735,3 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 // End of AdminDashboard.tsx
-
