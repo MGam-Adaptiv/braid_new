@@ -112,9 +112,14 @@ const MaterialCard: React.FC<MaterialCardProps> = ({
       <div className="flex flex-wrap gap-1.5 mb-4">
         {(material.unitTags || []).slice(0, 3).map((tag, i) => (
           <span key={`u-${i}`} className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-black uppercase rounded-md border border-blue-100">
-            {tag}
+            Unit {tag}
           </span>
         ))}
+        {(material.pageNumbers as any)?.some((p: any) => p !== null) && (
+          <span className="px-2 py-0.5 bg-gray-50 text-gray-400 text-[9px] font-black uppercase rounded-md border border-gray-100">
+            pp. {(material.pageNumbers as any).filter((p: any) => p !== null).join(', ')}
+          </span>
+        )}
         {(material.labelTags || []).slice(0, 2).map((tag, i) => (
           <span key={`l-${i}`} className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-black uppercase rounded-md">
             {tag}
