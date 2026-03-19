@@ -103,6 +103,9 @@ export interface Activity {
   rawContent?: string;
   topic?: string;
   activityType?: string;
+  activityTypeId?: string;
+  activityTypeName?: string;
+  activityFormat?: string;
   buildLog?: BuildLogEntry[];
   enhancements?: string[]; // quick-access list for analytics e.g. ['simplify','add_scaffolding']
   source?: {
