@@ -489,6 +489,12 @@ export const WorkbenchPanel: React.FC = () => {
         activityType: item.activityType || selectedDraftType || parsed.type || 'mixed',
         category: item.category || selectedDraftType || parsed.type || 'mixed',
 
+        // Activity Type Picker metadata
+        activityTypeId: item.activityTypeId || null,
+        activityTypeName: item.activityTypeName || null,
+        activityCategory: item.activityCategory || item.category || null,
+        activityFormat: item.activityFormat || null,
+
         // PRESERVE source information
         source: item.source || {
           publisher: combinedExtraction?.allTags?.publisher || '',
