@@ -3,6 +3,7 @@ import { Workspace, ChatMessage, WorkbenchItem, SourceMaterial, PageSource, Work
 import { useAuth } from './AuthContext';
 import { uploadPage } from '../services/firestoreService';
 import { draftResponse, refineDraft } from '../services/mistralService';
+import { ACTIVITY_TYPES } from '../constants/activityTypes';
 import toast from 'react-hot-toast';
 
 export interface CombinedContent {
@@ -61,6 +62,14 @@ interface StudioContextType {
   setActivityConfig: (config: { questionCount: number; questionFormat: string }) => void;
   pendingDraftType: string | null;
   setPendingDraftType: (type: string | null) => void;
+
+  // Activity Type Picker State
+  selectedActivityTypeId: string | null;
+  setSelectedActivityTypeId: (id: string | null) => void;
+  grammarFocus: string;
+  setGrammarFocus: (v: string) => void;
+  wordBankEnabled: boolean;
+  setWordBankEnabled: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -86,6 +95,11 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [lastDraftPrompt, setLastDraftPrompt] = useState<string>('');
 
+  // Activity Type Picker State
+  const [selectedActivityTypeId, setSelectedActivityTypeId] = useState<string | null>(null);
+  const [grammarFocus, setGrammarFocus] = useState<string>('');
+  const [wordBankEnabled, setWordBankEnabled] = useState(true);
+
   const addToWorkbench = (item: WorkbenchItem) => {
     setWorkbench(prev => [item, ...prev]);
   };
@@ -99,6 +113,13 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const addMessage = (msg: ChatMessage) => setMessages(prev => [...prev, msg]);
+
+  // Auto-populate grammarFocus when combinedExtraction updates
+  useEffect(() => {
+    if (combinedExtraction?.grammar?.length) {
+      setGrammarFocus(combinedExtraction.grammar[0]);
+    }
+  }, [combinedExtraction]);
 
   const uploadNewPage = async (pageData: Partial<PageSource>) => {
     if (!user) throw new Error("User must be logged in to upload pages");
@@ -157,8 +178,28 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCurrentDraftId(null);
     setDraftContent(null);
     setLastDraftPrompt(type === 'Custom' ? partnerInput : type);
+
+    // Resolve activity type template if one is selected
+    const resolveTemplate = (template: string): string => {
+      const vocab = (combinedExtraction?.vocabulary || []).slice(0, 15).join(', ');
+      return template
+        .replace('[TENSE]', grammarFocus || combinedExtraction?.grammar?.[0] || 'target tense')
+        .replace('[VOCABULARY SET]', vocab || 'target vocabulary')
+        .replace('[TOPIC]', combinedExtraction?.topic || 'the lesson topic')
+        .replace('[WORD BANK: YES/NO]', wordBankEnabled ? 'yes' : 'no');
+    };
+
+    const selectedType = ACTIVITY_TYPES.find(t => t.id === selectedActivityTypeId);
+    const activityTypeMeta = selectedType ? {
+      templateInstruction: resolveTemplate(selectedType.promptTemplate),
+      typeId: selectedType.id,
+      typeName: selectedType.name,
+      format: selectedType.format,
+      category: selectedType.category,
+    } : undefined;
+
     try {
-      const result = await draftResponse(type, partnerInput, sources, workbench, user.uid, user.email, activityConfig);
+      const result = await draftResponse(type, partnerInput, sources, workbench, user.uid, user.email, activityConfig, activityTypeMeta);
       setDraftContent(result);
       addMessage({ id: Date.now().toString(), role: 'partner', text: result, timestamp: Date.now() });
       if (type === 'Custom') setPartnerInput('');
@@ -215,10 +256,19 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setCurrentDraftId(null);
       return;
     }
-    // First send — add to workbench
+    // First send — add to workbench, carrying activity type metadata
     const newId = 'w-' + Math.random().toString(36).substr(2, 9);
     setCurrentDraftId(newId);
-    addToWorkbench(buildWorkbenchItem(newId, draftContent, lastDraftPrompt || undefined));
+    const selectedType = ACTIVITY_TYPES.find(t => t.id === selectedActivityTypeId);
+    const baseItem = buildWorkbenchItem(newId, draftContent, lastDraftPrompt || undefined);
+    const enrichedItem: any = {
+      ...baseItem,
+      activityTypeId: selectedType?.id || null,
+      activityTypeName: selectedType?.name || null,
+      activityCategory: selectedType?.category || null,
+      activityFormat: selectedType?.format || null,
+    };
+    addToWorkbench(enrichedItem);
     toast.success("Activity added to Workbench!");
   };
 
@@ -256,6 +306,12 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setActivityConfig,
       pendingDraftType,
       setPendingDraftType,
+      selectedActivityTypeId,
+      setSelectedActivityTypeId,
+      grammarFocus,
+      setGrammarFocus,
+      wordBankEnabled,
+      setWordBankEnabled,
     }}>
       {children}
     </StudioContext.Provider>
