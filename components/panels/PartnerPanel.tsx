@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStudio } from '../../context/StudioContext';
-import { 
-  Sparkles, ArrowRight, Check, Plus, BookOpen, 
+import {
+  Sparkles, ArrowRight, Check, Plus, BookOpen,
   ListChecks, PenTool, MessageCircle, Feather, Layers, ArrowUp, RefreshCw, X, Settings
 } from 'lucide-react';
 import { marked } from 'marked';
+import { ActivityTypePicker } from '../ActivityTypePicker';
 
 export const PartnerPanel: React.FC = () => {
   const {
@@ -25,6 +26,14 @@ export const PartnerPanel: React.FC = () => {
     setActivityConfig,
     pendingDraftType,
     setPendingDraftType,
+    selectedActivityTypeId,
+    setSelectedActivityTypeId,
+    grammarFocus,
+    setGrammarFocus,
+    wordBankEnabled,
+    setWordBankEnabled,
+    combinedExtraction,
+    workflowStage,
   } = useStudio();
   
   const [isExpanded, setIsExpanded] = useState(false);
@@ -197,6 +206,22 @@ export const PartnerPanel: React.FC = () => {
             </button>
           ))}
         </div>
+
+        {/* Activity Type Picker */}
+        {workflowStage === 'drafting' && (
+          <div className="mt-2 mb-3 border-t border-gray-100 pt-3">
+            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Activity Type</p>
+            <ActivityTypePicker
+              selected={selectedActivityTypeId}
+              onSelect={setSelectedActivityTypeId}
+              wordBankEnabled={wordBankEnabled}
+              onToggleWordBank={() => setWordBankEnabled(v => !v)}
+              grammarFocus={grammarFocus}
+              onChangeGrammarFocus={setGrammarFocus}
+              allGrammarPoints={combinedExtraction?.grammar || []}
+            />
+          </div>
+        )}
 
         {/* Free Text Input */}
         <div className="flex gap-2">
