@@ -114,7 +114,8 @@ export const draftResponse = async (
   currentWorkbench: WorkbenchItem[],
   userId: string,
   userEmail: string | null,
-  activityConfig?: { questionCount: number; questionFormat: string }
+  activityConfig?: { questionCount: number; questionFormat: string },
+  activityTypeMeta?: { templateInstruction: string; typeId: string; typeName: string; format: string; category: string }
 ): Promise<string> => {
   try {
     const sourceContext = sources.map((s, i) => {
@@ -142,9 +143,14 @@ Text Pool: ${(data.ocrTexts || []).join('\n\n')}`;
 
     const workbenchContext = currentWorkbench.map(w => `[Item: ${w.title}] ${w.content}`).join('\n\n');
 
-    const prompt = type === 'Custom'
+    // If an activity type template is selected, prepend ACTIVITY SPECIFICATION
+    const typeSpec = activityTypeMeta?.templateInstruction
+      ? `ACTIVITY SPECIFICATION: ${activityTypeMeta.templateInstruction}\n\n`
+      : '';
+
+    const prompt = typeSpec + (type === 'Custom'
       ? partnerInput
-      : `Draft a ${type} activity. Teacher instructions: ${partnerInput || 'Use the source material to create an appropriate activity.'}${activityConfig ? ` Format: ${activityConfig.questionFormat}, Questions: ${activityConfig.questionCount}` : ''}`;
+      : `Draft a ${type} activity. Teacher instructions: ${partnerInput || 'Use the source material to create an appropriate activity.'}${activityConfig ? ` Format: ${activityConfig.questionFormat}, Questions: ${activityConfig.questionCount}` : ''}`);
 
     const response = await fetch('/.netlify/functions/ai-draft', {
       method: 'POST',
