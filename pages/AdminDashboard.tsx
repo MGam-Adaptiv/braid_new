@@ -298,7 +298,7 @@ export const AdminDashboard: React.FC = () => {
     
     filteredActivities.forEach(a => {
       const bookTitle = a.source?.bookTitle;
-      const type = a.activityType || a.category || a.type;
+      const type = a.activityTypeName || a.activityType || a.category || a.type;
       const cefr = a.level || a.cefr;
       const publisher = a.source?.publisher;
 
@@ -328,7 +328,7 @@ export const AdminDashboard: React.FC = () => {
     const skillsCounts: Record<string, number> = {};
     filteredActivities.forEach((a, index) => {
       if (index === 0) console.log("Sample Activity Fields:", a); // Debug log
-      const skill = a.activityType || a.category || a.type;
+      const skill = a.activityTypeName || a.activityType || a.category || a.type;
       if (skill) skillsCounts[skill] = (skillsCounts[skill] || 0) + 1;
     });
     setSkillsData(Object.entries(skillsCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count));
@@ -347,6 +347,14 @@ export const AdminDashboard: React.FC = () => {
       'multi-select': 'Multi-Select',
     };
     filteredActivities.forEach((a: any) => {
+      if (a.activityFormat === 'print') {
+        formatCounts['Print Worksheet'] = (formatCounts['Print Worksheet'] || 0) + 1;
+        return;
+      }
+      if (a.activityFormat === 'online') {
+        formatCounts['Online Interactive'] = (formatCounts['Online Interactive'] || 0) + 1;
+        return;
+      }
       const questions = a.interactiveData?.questions || [];
       if (questions.length === 0) {
         formatCounts['Print Worksheet'] = (formatCounts['Print Worksheet'] || 0) + 1;
@@ -377,7 +385,7 @@ export const AdminDashboard: React.FC = () => {
     
     // First pass: collect all skill types from ALL activities
     allActivities.forEach(a => {
-      const t = a.activityType || a.category || a.type;
+      const t = a.activityTypeName || a.activityType || a.category || a.type;
       if (t) typesSet.add(t);
     });
     const sortedTypes = Array.from(typesSet).sort();
@@ -386,7 +394,7 @@ export const AdminDashboard: React.FC = () => {
     // Second pass: aggregate counts for ALL publishers
     allActivities.forEach(a => {
       const pub = a.source?.publisher || "Teacher's Own Materials";
-      const type = a.activityType || a.category || a.type;
+      const type = a.activityTypeName || a.activityType || a.category || a.type;
       
       if (pub && type) {
         if (!publisherTypeCounts[pub]) publisherTypeCounts[pub] = {};
@@ -495,7 +503,7 @@ export const AdminDashboard: React.FC = () => {
     // 2. SKILL GAP HEATMAP
     const skillCounts: Record<string, number> = {};
     filteredActivities.forEach((a: any) => {
-      const s = a.activityType || a.category || a.type;
+      const s = a.activityTypeName || a.activityType || a.category || a.type;
       if (s) skillCounts[s] = (skillCounts[s] || 0) + 1;
     });
     const skillTotal = Object.values(skillCounts).reduce((sum, n) => sum + n, 0);
