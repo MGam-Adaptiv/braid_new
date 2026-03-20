@@ -159,7 +159,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
           <span className="px-2 py-0.5 bg-gray-900 text-white text-[9px] font-black uppercase rounded-md">
-            {activity.activityType || activity.category || 'Mixed'}
+            {(activity as any).activityTypeName || activity.activityType || activity.category || 'Mixed'}
           </span>
           <span className="px-2 py-0.5 bg-coral text-white text-[9px] font-black uppercase rounded-md">
             {activity.level || 'B1'}
@@ -646,7 +646,7 @@ export const ActivitiesPage: React.FC = () => {
                 <div className="mb-4">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Labels</p>
                   <div className="flex flex-wrap gap-2">
-                    {[...new Set(activities.map(a => a.activityType || a.category).filter((l): l is string => !!l))].map((label: string) => (
+                    {[...new Set(activities.map(a => (a as any).activityTypeName || a.activityType || a.category).filter((l): l is string => !!l))].map((label: string) => (
                       <button
                         key={label}
                         onClick={() => toggleFilter('labels', label)}
