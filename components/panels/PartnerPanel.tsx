@@ -37,8 +37,17 @@ export const PartnerPanel: React.FC = () => {
   } = useStudio();
   
   const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const hasMaterial = sources.length > 0;
+
+  const toggleSkill = (skill: string) => {
+    setSelectedSkills(prev =>
+      prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
+    );
+  };
+
+  const skillChips = ['Reading', 'Grammar', 'Vocabulary', 'Speaking', 'Writing'];
 
   useEffect(() => {
     if (draftContent && chatEndRef.current) {
@@ -209,8 +218,30 @@ export const PartnerPanel: React.FC = () => {
 
         {/* Activity Type Picker */}
         {workflowStage === 'drafting' && (
-          <div className="mt-2 mb-3 border-t border-gray-100 pt-3">
-            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Activity Type</p>
+          <div className="mt-2 mb-3 border-t border-gray-100 pt-3 space-y-3">
+            {/* Skill Focus chips */}
+            <div>
+              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Skill Focus</p>
+              <div className="flex flex-wrap gap-1.5">
+                {skillChips.map(skill => {
+                  const active = selectedSkills.includes(skill.toLowerCase());
+                  return (
+                    <button
+                      key={skill}
+                      onClick={() => toggleSkill(skill.toLowerCase())}
+                      className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${
+                        active
+                          ? 'bg-coral text-white shadow-sm shadow-coral/20'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}
+                    >
+                      {skill}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Activity Type</p>
             <ActivityTypePicker
               selected={selectedActivityTypeId}
               onSelect={setSelectedActivityTypeId}
@@ -219,6 +250,7 @@ export const PartnerPanel: React.FC = () => {
               grammarFocus={grammarFocus}
               onChangeGrammarFocus={setGrammarFocus}
               allGrammarPoints={combinedExtraction?.grammar || []}
+              selectedSkills={selectedSkills}
             />
           </div>
         )}
