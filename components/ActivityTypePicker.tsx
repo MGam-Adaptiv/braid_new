@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ACTIVITY_TYPES, WORD_BANK_TYPES, ActivityTypeDefinition } from '../constants/activityTypes';
+import { ACTIVITY_TYPES, WORD_BANK_TYPES } from '../constants/activityTypes';
 import { ChevronDown } from 'lucide-react';
 
 interface ActivityTypePickerProps {
@@ -10,9 +10,9 @@ interface ActivityTypePickerProps {
   grammarFocus: string;
   onChangeGrammarFocus: (v: string) => void;
   allGrammarPoints: string[];
+  selectedSkills: string[];
 }
 
-type CategoryFilter = 'all' | 'grammar' | 'vocabulary' | 'mixed';
 type FormatFilter = 'all' | 'print' | 'online' | 'both';
 
 const formatBadge: Record<string, string> = {
@@ -22,7 +22,7 @@ const formatBadge: Record<string, string> = {
 };
 
 const categoryBadge: Record<string, string> = {
-  grammar: 'bg-purple-100 text-purple-700',
+  grammar: 'bg-coral/10 text-coral',
   vocabulary: 'bg-teal-100 text-teal-700',
   mixed: 'bg-gray-100 text-gray-600',
 };
@@ -35,15 +35,15 @@ export const ActivityTypePicker: React.FC<ActivityTypePickerProps> = ({
   grammarFocus,
   onChangeGrammarFocus,
   allGrammarPoints,
+  selectedSkills,
 }) => {
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
   const [showGrammarDropdown, setShowGrammarDropdown] = useState(false);
 
   const filtered = ACTIVITY_TYPES.filter((t) => {
-    const catOk = categoryFilter === 'all' || t.category === categoryFilter;
+    const skillOk = selectedSkills.length === 0 || t.skills.some(s => selectedSkills.includes(s));
     const fmtOk = formatFilter === 'all' || t.format === formatFilter;
-    return catOk && fmtOk;
+    return skillOk && fmtOk;
   });
 
   const selectedType = ACTIVITY_TYPES.find((t) => t.id === selected);
@@ -56,7 +56,7 @@ export const ActivityTypePicker: React.FC<ActivityTypePickerProps> = ({
         <div className="relative">
           <button
             onClick={() => setShowGrammarDropdown(!showGrammarDropdown)}
-            className="w-full flex items-center justify-between px-3 py-2 bg-purple-50 border border-purple-200 rounded-xl text-[10px] font-black text-purple-700 uppercase tracking-widest hover:bg-purple-100 transition-colors"
+            className="w-full flex items-center justify-between px-3 py-2 bg-coral/5 border border-coral/20 rounded-xl text-[10px] font-black text-coral uppercase tracking-widest hover:bg-coral/10 transition-colors"
           >
             <span>Grammar focus: {grammarFocus}</span>
             <ChevronDown size={12} className={`transition-transform ${showGrammarDropdown ? 'rotate-180' : ''}`} />
@@ -72,7 +72,7 @@ export const ActivityTypePicker: React.FC<ActivityTypePickerProps> = ({
                     setShowGrammarDropdown(false);
                   }}
                   className={`w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-gray-50 transition-colors ${
-                    point === grammarFocus ? 'text-purple-700 bg-purple-50' : 'text-gray-600'
+                    point === grammarFocus ? 'text-coral bg-coral/5' : 'text-gray-600'
                   }`}
                 >
                   {point}
@@ -83,40 +83,21 @@ export const ActivityTypePicker: React.FC<ActivityTypePickerProps> = ({
         </div>
       )}
 
-      {/* Filter Row */}
-      <div className="space-y-1.5">
-        {/* Category filters */}
-        <div className="flex gap-1">
-          {(['all', 'grammar', 'vocabulary', 'mixed'] as CategoryFilter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setCategoryFilter(f)}
-              className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${
-                categoryFilter === f
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-        {/* Format filters */}
-        <div className="flex gap-1">
-          {(['all', 'print', 'online', 'both'] as FormatFilter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFormatFilter(f)}
-              className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${
-                formatFilter === f
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
+      {/* Format Filter */}
+      <div className="flex gap-1">
+        {(['all', 'print', 'online', 'both'] as FormatFilter[]).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFormatFilter(f)}
+            className={`flex-1 py-1 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${
+              formatFilter === f
+                ? 'bg-gray-900 text-white'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}
+          >
+            {f}
+          </button>
+        ))}
       </div>
 
       {/* Activity Type Grid */}
