@@ -110,11 +110,13 @@ FILL-BLANK SPECIFIC RULES:
 - The student must be able to see the complete sentence. Do NOT use generic labels like "Gap 1", "Gap 2" — these are useless without context.
 - Set "context" to null for fill-blank questions (the sentence is already in "question").
 - Set "correctAnswer" to the exact word or phrase from the answer key that fills that blank.
+- EXACTLY ONE BLANK PER QUESTION: Each fill-blank question object must contain EXACTLY ONE ___ blank. If a sentence has two gaps, create two separate question objects — one per blank, each with its own correctAnswer. Never put two ___ in a single question string.
 - PASSAGE WITH EMBEDDED GAPS: If the content is a continuous reading passage with numbered gaps like "(1)", "(2)" or "___1", "___2" inside sentences, you MUST:
   1. Find the complete sentence that contains each gap number.
   2. Replace the gap marker in that sentence with ___ to create the "question" field.
   3. Each gap becomes one question. The "question" field is the whole sentence with the blank — not a label.
   4. Example passage: "She (1)___ been to Paris." → question: "She ___ been to Paris." with correctAnswer from answer key position 1.
+  5. If one sentence has two gap markers, e.g. "She (1)___ to Paris (2)___ last year.", split into two questions: "She ___ to Paris last year." and "She been to Paris ___ last year." — each with its own correctAnswer.
 - "options" should be an empty array for fill-blank unless there is a word bank, in which case populate the top-level "wordBank" array.
 - If the answer key contains space-separated answers like "can can can can't can", map them positionally: 1st word to gap 1, 2nd to gap 2, etc.
 - NEVER produce questions with text like "Gap 1", "Blank 2", "Item 3" — always the real sentence.
