@@ -25,7 +25,7 @@ export const PartnerPanel: React.FC = () => {
   const {
     partnerInput, setPartnerInput,
     handleGenerateDraft, isGenerating,
-    draftContent,
+    draftContent, draftNarration,
     sendDraftToWorkbench, currentDraftId,
     sources, isRefining, handleRefineDraft,
     setSelectedActivityTypeId,
@@ -167,6 +167,29 @@ export const PartnerPanel: React.FC = () => {
           </div>
         )}
 
+        {/* Agent narration bubble */}
+        {draftNarration && !isGenerating && (
+          <div className="animate-in fade-in duration-300 bg-gray-50 rounded-2xl p-3.5 border border-gray-100">
+            <p className="text-[8px] font-black uppercase tracking-widest text-gray-300 mb-2">Agent reasoning</p>
+            <p className="text-[11px] text-gray-500 leading-relaxed">
+              Building a{' '}
+              <span className="font-bold text-gray-700">{draftNarration.activityType}</span>
+              {draftNarration.cefrLevel && (
+                <> · <span className="font-bold text-gray-700">{draftNarration.cefrLevel}</span></>
+              )}
+              {draftNarration.itemsSelected?.length > 0 && (
+                <> · Using: <span className="text-gray-600">{draftNarration.itemsSelected.join(', ')}</span></>
+              )}
+              {draftNarration.itemsSkipped?.length > 0 && (
+                <> · Skipped: <span className="text-gray-400">{draftNarration.itemsSkipped.join(', ')}</span>
+                {draftNarration.skipReason && (
+                  <span className="text-gray-400"> ({draftNarration.skipReason})</span>
+                )}</>
+              )}
+            </p>
+          </div>
+        )}
+
         {/* Draft card */}
         {draftContent && (
           <div className="animate-in slide-in-from-bottom-2 fade-in duration-500">
@@ -296,4 +319,3 @@ export const PartnerPanel: React.FC = () => {
     </div>
   );
 };
-
