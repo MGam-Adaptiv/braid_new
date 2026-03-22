@@ -106,12 +106,18 @@ RULES:
 
 FILL-BLANK SPECIFIC RULES:
 - When the content has numbered blanks like "He __ (1) __ do many things" or "(1) ___", classify each blank as type "fill-blank".
-- For fill-blank questions, set "question" to a label like "Gap 1", "Gap 2" etc.
-- Add a "context" field containing the full sentence with ___ where the blank goes, so the student sees the surrounding text. Example: "He ___ do many things!"
+- For fill-blank questions, set "question" to the FULL SENTENCE with ___ where the blank goes. Example: "He ___ do many things!" NOT "Gap 1".
+- The student must be able to see the complete sentence. Do NOT use generic labels like "Gap 1", "Gap 2" — these are useless without context.
+- Set "context" to null for fill-blank questions (the sentence is already in "question").
 - Set "correctAnswer" to the exact word or phrase from the answer key that fills that blank.
-- If the content is a reading passage with numbered gaps, extract each gap as a separate fill-blank question with its sentence context.
+- PASSAGE WITH EMBEDDED GAPS: If the content is a continuous reading passage with numbered gaps like "(1)", "(2)" or "___1", "___2" inside sentences, you MUST:
+  1. Find the complete sentence that contains each gap number.
+  2. Replace the gap marker in that sentence with ___ to create the "question" field.
+  3. Each gap becomes one question. The "question" field is the whole sentence with the blank — not a label.
+  4. Example passage: "She (1)___ been to Paris." → question: "She ___ been to Paris." with correctAnswer from answer key position 1.
 - "options" should be an empty array for fill-blank unless there is a word bank, in which case populate the top-level "wordBank" array.
 - If the answer key contains space-separated answers like "can can can can't can", map them positionally: 1st word to gap 1, 2nd to gap 2, etc.
+- NEVER produce questions with text like "Gap 1", "Blank 2", "Item 3" — always the real sentence.
 `;
 
     const userPrompt = `
@@ -125,91 +131,84 @@ ${studentContent}
 ${answerKey}
 `;
 
-    const chatResponse = await client.chat.complete({
-      model: 'mistral-small-latest',
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt,
-        },
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-      temperature: 0.1, // Low temperature for deterministic JSON output
-      responseFormat: { type: 'json_object' },
-    });
+    // Retry loop — up to 2 attempts in case of malformed JSON response
+    let parsedResult: any = null;
+    let lastError: any = null;
+    let lastUsage: any = null;
 
-    const content = chatResponse.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error('No content received from Mistral');
-    }
-
-    let parsedResult;
-    try {
-      parsedResult = JSON.parse(content);
-
-      // Post-processing: Strip option prefixes from options and correctAnswer
-      if (parsedResult.questions && Array.isArray(parsedResult.questions)) {
-        parsedResult.questions.forEach((q: any) => {
-          const prefixRegex = /^[A-Da-d][\.\)]\s*/;
-          
-          // Clean options
-          if (q.options && Array.isArray(q.options)) {
-            q.options = q.options.map((opt: string) => opt.replace(prefixRegex, ''));
-          }
-          
-          // Clean correctAnswer and map letters to text if needed
-          if (typeof q.correctAnswer === 'string') {
-             // 1. Strip prefix
-             let cleanAns = q.correctAnswer.replace(prefixRegex, '');
-             
-             // 2. Check if it matches an option
-             const match = q.options?.find((opt: string) => opt.toLowerCase() === cleanAns.toLowerCase());
-             
-             if (!match) {
-                // 3. If no match, check if it's a single letter A-D
-                const letterMatch = cleanAns.match(/^[A-Da-d]$/);
-                if (letterMatch && q.options && q.options.length > 0) {
-                   const index = letterMatch[0].toUpperCase().charCodeAt(0) - 65; // A=0, B=1...
-                   if (index >= 0 && index < q.options.length) {
-                      cleanAns = q.options[index];
-                   }
-                }
-             }
-             q.correctAnswer = cleanAns;
-
-          } else if (Array.isArray(q.correctAnswer)) {
-             q.correctAnswer = q.correctAnswer.map((ans: string) => {
-                let cleanAns = ans.replace(prefixRegex, '');
-                const match = q.options?.find((opt: string) => opt.toLowerCase() === cleanAns.toLowerCase());
-                if (!match) {
-                    const letterMatch = cleanAns.match(/^[A-Da-d]$/);
-                    if (letterMatch && q.options && q.options.length > 0) {
-                       const index = letterMatch[0].toUpperCase().charCodeAt(0) - 65;
-                       if (index >= 0 && index < q.options.length) {
-                          cleanAns = q.options[index];
-                       }
-                    }
-                }
-                return cleanAns;
-             });
-          }
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const chatResponse = await client.chat.complete({
+          model: 'mistral-small-latest',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0, // Zero temperature for fully deterministic JSON output
+          responseFormat: { type: 'json_object' },
         });
+
+        const content = chatResponse.choices?.[0]?.message?.content;
+        if (!content) throw new Error('No content received from Mistral');
+
+        // Robust JSON extraction — handles preamble text like "Here's the JSON: {...}"
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('No JSON object found in AI response');
+
+        const raw = JSON.parse(jsonMatch[0]);
+        lastUsage = chatResponse.usage;
+
+        // Post-processing: Strip option prefixes from options and correctAnswer
+        if (raw.questions && Array.isArray(raw.questions)) {
+          const prefixRegex = /^[A-Da-d][\.\)]\s*/;
+          raw.questions.forEach((q: any) => {
+            // Clean options
+            if (q.options && Array.isArray(q.options)) {
+              q.options = q.options.map((opt: string) => opt.replace(prefixRegex, ''));
+            }
+
+            // Clean correctAnswer and map letters to text if needed
+            const remapLetter = (ans: string): string => {
+              let clean = ans.replace(prefixRegex, '');
+              const alreadyMatches = q.options?.some((o: string) => o.toLowerCase() === clean.toLowerCase());
+              if (!alreadyMatches) {
+                const isLoneLetter = /^[A-Da-d]$/.test(clean);
+                if (isLoneLetter && q.options && q.options.length > 0) {
+                  const idx = clean.toUpperCase().charCodeAt(0) - 65; // A=0, B=1...
+                  if (idx >= 0 && idx < q.options.length) clean = q.options[idx];
+                }
+              }
+              return clean;
+            };
+
+            if (typeof q.correctAnswer === 'string') {
+              q.correctAnswer = remapLetter(q.correctAnswer);
+            } else if (Array.isArray(q.correctAnswer)) {
+              q.correctAnswer = q.correctAnswer.map(remapLetter);
+            }
+          });
+        }
+
+        parsedResult = raw;
+        break; // success — exit retry loop
+
+      } catch (e: any) {
+        lastError = e;
+        if (attempt === 0) console.warn('ai-convert-interactive: attempt 1 failed, retrying...', e?.message);
       }
-    } catch (e) {
-      console.error('Failed to parse Mistral response as JSON:', content);
-      throw new Error('Invalid JSON response from AI');
     }
 
-    const usage = chatResponse.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+    if (!parsedResult) {
+      console.error('ai-convert-interactive: both attempts failed:', lastError);
+      throw lastError || new Error('Invalid JSON response from AI');
+    }
+
+    const usage = lastUsage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
     const tokensUsed = {
       promptTokens: usage.promptTokens,
       completionTokens: usage.completionTokens,
       totalTokens: usage.totalTokens || (usage.promptTokens + usage.completionTokens),
-      model: 'mistral-medium-latest'
+      model: 'mistral-small-latest'
     };
 
     return {
@@ -229,4 +228,3 @@ ${answerKey}
 };
 
 export { handler };
-
