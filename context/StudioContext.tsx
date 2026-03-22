@@ -49,6 +49,7 @@ interface StudioContextType {
   partnerInput: string;
   setPartnerInput: (input: string) => void;
   draftContent: string | null;
+  draftNarration: any | null;
   isGenerating: boolean;
   handleGenerateDraft: (type?: string) => Promise<void>;
   sendDraftToWorkbench: () => void;
@@ -86,6 +87,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // New Partner States
   const [partnerInput, setPartnerInput] = useState('');
   const [draftContent, setDraftContent] = useState<string | null>(null);
+  const [draftNarration, setDraftNarration] = useState<any | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedDraftType, setSelectedDraftType] = useState<string>('mixed');
   const [isRefining, setIsRefining] = useState(false);
@@ -177,6 +179,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Reset so the panel shows the ADD TO WORKBENCH button for the new draft
     setCurrentDraftId(null);
     setDraftContent(null);
+    setDraftNarration(null);
     setLastDraftPrompt(type === 'Custom' ? partnerInput : type);
 
     // Resolve activity type template if one is selected
@@ -200,8 +203,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     try {
       const result = await draftResponse(type, partnerInput, sources, workbench, user.uid, user.email, activityConfig, activityTypeMeta);
-      setDraftContent(result);
-      addMessage({ id: Date.now().toString(), role: 'partner', text: result, timestamp: Date.now() });
+      setDraftContent(result.content);
+      setDraftNarration(result.narration);
+      addMessage({ id: Date.now().toString(), role: 'partner', text: result.content, timestamp: Date.now() });
       if (type === 'Custom') setPartnerInput('');
     } catch (error) {
       toast.error("Failed to generate draft.");
@@ -293,6 +297,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       partnerInput,
       setPartnerInput,
       draftContent,
+      draftNarration,
       isGenerating,
       handleGenerateDraft,
       sendDraftToWorkbench,
