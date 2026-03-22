@@ -114,7 +114,7 @@ CRITICAL: You MUST output in this EXACT structure with these EXACT markers:
 
 TYPE RULES — follow exactly:
 
-fill-blank: "question" = the COMPLETE SENTENCE with ___ where the blank is. Example: "She ___ been waiting for an hour." NEVER write "Gap 1", "Blank 2", or any placeholder label. If the student content has a passage with numbered gaps like (1), (2), find and include the full sentence containing that gap. "correctAnswer" = exact word/phrase. "options" = [] unless word bank exists (then list word bank items in top-level wordBank array). "hint" = verb hint in parentheses if present, else null. "pairs" = null.
+fill-blank: "question" = the COMPLETE SENTENCE with ___ where the blank is. Example: "She ___ been waiting for an hour." NEVER write "Gap 1", "Blank 2", or any placeholder label. If the student content has a passage with numbered gaps like (1), (2), find and include the full sentence containing that gap. "correctAnswer" = exact word/phrase. "options" = [] unless word bank exists (then list word bank items in top-level wordBank array). "hint" = verb hint in parentheses if present, else null. "pairs" = null. CRITICAL: Each fill-blank question object must have EXACTLY ONE ___ blank. If a sentence has two gaps, create two separate question objects — one per blank. Never put two ___ in a single question string.
 
 multiple-choice: "question" = question text. "options" = array of 3-4 answer strings (no letter prefixes like A. B. — just the text). "correctAnswer" = the exact text of the correct option (not a letter). "hint" = null. "pairs" = null.
 
@@ -126,7 +126,7 @@ open-ended: "question" = the question text. "options" = []. "correctAnswer" = nu
 
 FOR SPEAKING/WRITING ACTIVITIES: Output {"activityType": "Speaking", "instructions": "Use the prompts below for discussion.", "questions": [], "wordBank": []}
 
-CRITICAL: Every fill-blank question MUST contain a real, complete sentence. Never use generic labels.]
+CRITICAL: Every fill-blank question MUST contain a real, complete sentence with exactly one ___. Never use generic labels.]
 
 ---END---`,
         },
