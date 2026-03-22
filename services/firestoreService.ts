@@ -417,6 +417,15 @@ export const saveStudentResponse = async (response: { magicLinkId: string, stude
   }
 };
 
+export const revokeMagicLink = async (linkId: string): Promise<void> => {
+  try {
+    await db.collection('magicLinks').doc(linkId).update({ isActive: false });
+  } catch (error) {
+    console.error('Error revoking magic link:', error);
+    throw error;
+  }
+};
+
 export const getResponsesForMagicLink = async (magicLinkId: string) => {
   try {
     const q = db.collection('magicLinks').doc(magicLinkId).collection('responses').orderBy('submittedAt', 'desc');
