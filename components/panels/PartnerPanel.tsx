@@ -297,4 +297,3 @@ export const PartnerPanel: React.FC = () => {
   );
 };
 
-
