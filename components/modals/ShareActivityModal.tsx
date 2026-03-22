@@ -20,10 +20,12 @@ export const ShareActivityModal: React.FC<ShareActivityModalProps> = ({
   onManageClasses
 }) => {
   const { user } = useAuth();
-  const NON_INTERACTIVE_TYPES = ['speaking', 'writing'];
-  const isNonInteractive = NON_INTERACTIVE_TYPES.includes((activity?.activityType || activity?.type || '').toLowerCase());
+  const NON_INTERACTIVE_KEYWORDS = ['speaking', 'writing', 'discussion'];
+  const activityTypeStr = (activity?.activityType || (activity as any)?.activityTypeName || activity?.type || '').toLowerCase();
+  const isNonInteractive = NON_INTERACTIVE_KEYWORDS.some(k => activityTypeStr.includes(k));
+  const isPrintOnly = isNonInteractive || (activity as any)?.activityFormat === 'print';
 
-  const [activeTab, setActiveTab]           = useState<'print' | 'interactive' | 'manage'>(isNonInteractive ? 'print' : 'interactive');
+  const [activeTab, setActiveTab]           = useState<'print' | 'interactive' | 'manage'>(isPrintOnly ? 'print' : 'interactive');
   const [collectName, setCollectName]       = useState(true);
   const [showResults, setShowResults]       = useState(true);
   const [includeNotes, setIncludeNotes]     = useState(false);
@@ -175,22 +177,27 @@ export const ShareActivityModal: React.FC<ShareActivityModalProps> = ({
               <FileText size={14} /> Print
             </button>
             <button
-              onClick={() => !isNonInteractive && setActiveTab('interactive')}
+              onClick={() => !isPrintOnly && setActiveTab('interactive')}
               className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1.5 transition-all ${
-                isNonInteractive
-                  ? 'text-gray-300 cursor-not-allowed'
+                isPrintOnly
+                  ? 'text-gray-300 cursor-not-allowed opacity-50'
                   : activeTab === 'interactive' ? 'bg-coral text-white shadow-sm' : 'text-gray-500'
               }`}
-              title={isNonInteractive ? 'Speaking & Writing activities use print only' : undefined}
+              title={isPrintOnly ? 'This activity type is print only — no interactive quiz available' : undefined}
             >
               <Play size={14} /> Interactive
             </button>
             <button
-              onClick={() => setActiveTab('manage')}
-              className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1.5 transition-all ${activeTab === 'manage' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+              onClick={() => !isPrintOnly && setActiveTab('manage')}
+              className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1.5 transition-all ${
+                isPrintOnly
+                  ? 'text-gray-300 cursor-not-allowed opacity-50'
+                  : activeTab === 'manage' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'
+              }`}
+              title={isPrintOnly ? 'This activity type is print only — no magic links available' : undefined}
             >
               <Link size={14} /> Manage Links
-              {activeLinks.length > 0 && (
+              {!isPrintOnly && activeLinks.length > 0 && (
                 <span className="ml-1 bg-coral text-white text-[8px] font-black rounded-full w-4 h-4 flex items-center justify-center">
                   {activeLinks.length}
                 </span>
@@ -199,11 +206,11 @@ export const ShareActivityModal: React.FC<ShareActivityModalProps> = ({
           </div>
         </div>
 
-        {isNonInteractive && activeTab !== 'manage' && (
-          <div className="px-6 py-3 bg-blue-50 border-b border-blue-100 flex items-start gap-3">
-            <span className="text-blue-500 text-lg mt-0.5">💬</span>
-            <p className="text-[10px] font-bold text-blue-700 leading-relaxed uppercase tracking-wide">
-              Speaking & Writing activities are productive skills — print or share as a digital worksheet. Interactive scoring is not applicable.
+        {isPrintOnly && (
+          <div className="px-6 py-3 bg-amber-50 border-b border-amber-100 flex items-center gap-3">
+            <FileText size={16} className="text-amber-500 shrink-0" />
+            <p className="text-[10px] font-bold text-amber-700 leading-relaxed">
+              This is a <span className="uppercase">print-only</span> activity — interactive quiz and magic links are not available for this type.
             </p>
           </div>
         )}
