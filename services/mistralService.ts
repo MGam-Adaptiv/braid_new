@@ -116,7 +116,7 @@ export const draftResponse = async (
   userEmail: string | null,
   activityConfig?: { questionCount: number; questionFormat: string },
   activityTypeMeta?: { templateInstruction: string; typeId: string; typeName: string; format: string; category: string }
-): Promise<string> => {
+): Promise<{ content: string; narration: any | null }> => {
   try {
     const sourceContext = sources.map((s, i) => {
       try {
@@ -165,10 +165,13 @@ Text Pool: ${(data.ocrTexts || []).join('\n\n')}`;
       await trackTokenUsage(userId, data.tokensUsed, 'drafting');
     }
 
-    return data.result || "The drafting partner encountered an error. Please try again.";
+    return {
+      content: data.result || "The drafting partner encountered an error. Please try again.",
+      narration: data.narration || null,
+    };
   } catch (error) {
     console.error("Draft generation error:", error);
-    return "The drafting partner encountered an error. Please try again.";
+    return { content: "The drafting partner encountered an error. Please try again.", narration: null };
   }
 };
 
@@ -249,4 +252,5 @@ export const convertToInteractive = async (
     return null;
   }
 };
+
 
