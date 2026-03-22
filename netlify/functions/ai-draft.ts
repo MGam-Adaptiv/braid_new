@@ -81,6 +81,9 @@ Keep your tone warm, approachable, and respectful.
 
 CRITICAL: You MUST output in this EXACT structure with these EXACT markers:
 
+---NARRATION---
+[Output raw JSON only — no markdown fences. Schema: {"activityType": "string e.g. Gap Fill", "cefrLevel": "string e.g. B1", "itemsSelected": ["word1", "word2"], "itemsSkipped": ["word3"], "skipReason": "one short phrase explaining why items were skipped, e.g. low frequency for this level"}. List every vocabulary/grammar item from the source pool. itemsSelected = items you used in the activity. itemsSkipped = items from the pool you did not use. If nothing was skipped, use []. If no pool exists, itemsSelected = [] and itemsSkipped = [].]
+
 ---TITLE---
 [A SHORT, UNIQUE plain-text title — ABSOLUTELY NO markdown, asterisks, bold, or surrounding quotes. The title MUST name the SPECIFIC grammar point or vocabulary set being practised, e.g. "Modal Verbs Can & Can't — Abilities Interview" or "Unit 3 Food Vocabulary: Quantities Matching". Never use vague titles like "Speaking Activity" or "Grammar Practice". Each activity for the same book must have a distinctly different title.]
 
@@ -144,6 +147,19 @@ CRITICAL: Every fill-blank question MUST contain a real, complete sentence with 
       throw new Error('No content received from Mistral');
     }
 
+    // Extract ---NARRATION--- block and strip it from the content returned to the client
+    let narration: any = null;
+    let cleanedContent = content;
+    const narrationMatch = content.match(/---NARRATION---\s*([\s\S]*?)---TITLE---/);
+    if (narrationMatch) {
+      try {
+        narration = JSON.parse(narrationMatch[1].trim());
+      } catch (_) {
+        // narration JSON malformed — silently ignore, narration stays null
+      }
+      cleanedContent = content.replace(/---NARRATION---[\s\S]*?---TITLE---/, '---TITLE---');
+    }
+
     const usage = chatResponse.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
     const tokensUsed = {
       promptTokens: usage.promptTokens,
@@ -155,7 +171,7 @@ CRITICAL: Every fill-blank question MUST contain a real, complete sentence with 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ result: content, tokensUsed }),
+      body: JSON.stringify({ result: cleanedContent, narration, tokensUsed }),
     };
 
   } catch (error: any) {
