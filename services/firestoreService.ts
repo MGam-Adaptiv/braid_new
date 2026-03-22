@@ -398,11 +398,10 @@ export const saveStudentResponse = async (response: { magicLinkId: string, stude
       submittedAt: serverTimestamp()
     });
     
-    // 3. Non-Critical Updates (Fire-and-forget)
-    // We intentionally do not await these to prevent blocking and to ignore errors
-    linkRef.update({
+    // 3. Update responsesCount — awaited so ShareActivityModal reads the correct value immediately
+    await linkRef.update({
       responsesCount: increment(1)
-    }).catch(e => console.warn("Non-critical update failed (responsesCount):", e));
+    }).catch(e => console.error("Failed to update responsesCount:", e));
 
     if (classTagId) {
       db.collection('classTags').doc(classTagId).update({
