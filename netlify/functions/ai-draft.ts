@@ -93,6 +93,41 @@ CRITICAL: You MUST output in this EXACT structure with these EXACT markers:
 ---ANSWER KEY---
 [The solutions. For speaking/writing activities write: N/A — Speaking/Writing activity: sample model answers for teacher reference, then provide 3-4 model answers.]
 
+---INTERACTIVE DATA---
+[Output a single valid JSON object. NO markdown fences, NO code blocks — raw JSON only. Schema:
+{
+  "activityType": "string (e.g. Gap Fill, Error Correction, Multiple Choice, True/False, Matching, Speaking Cards, Open Questions)",
+  "instructions": "string — plain text instruction for students, no markdown symbols",
+  "questions": [
+    {
+      "id": 1,
+      "type": "fill-blank | multiple-choice | true-false | matching | open-ended",
+      "question": "string — see type rules below",
+      "options": [],
+      "correctAnswer": "string | null",
+      "hint": "string | null",
+      "pairs": null
+    }
+  ],
+  "wordBank": []
+}
+
+TYPE RULES — follow exactly:
+
+fill-blank: "question" = the COMPLETE SENTENCE with ___ where the blank is. Example: "She ___ been waiting for an hour." NEVER write "Gap 1", "Blank 2", or any placeholder label. If the student content has a passage with numbered gaps like (1), (2), find and include the full sentence containing that gap. "correctAnswer" = exact word/phrase. "options" = [] unless word bank exists (then list word bank items in top-level wordBank array). "hint" = verb hint in parentheses if present, else null. "pairs" = null.
+
+multiple-choice: "question" = question text. "options" = array of 3-4 answer strings (no letter prefixes like A. B. — just the text). "correctAnswer" = the exact text of the correct option (not a letter). "hint" = null. "pairs" = null.
+
+true-false: "question" = the statement. "options" = ["True", "False"]. "correctAnswer" = "True" or "False". "hint" = null. "pairs" = null.
+
+matching: "question" = "Match the items." or similar brief instruction. "options" = []. "correctAnswer" = null. "hint" = null. "pairs" = [{"left": "term", "right": "definition or match"}].
+
+open-ended: "question" = the question text. "options" = []. "correctAnswer" = null. "hint" = null. "pairs" = null.
+
+FOR SPEAKING/WRITING ACTIVITIES: Output {"activityType": "Speaking", "instructions": "Use the prompts below for discussion.", "questions": [], "wordBank": []}
+
+CRITICAL: Every fill-blank question MUST contain a real, complete sentence. Never use generic labels.]
+
 ---END---`,
         },
         {
