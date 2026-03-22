@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useStudio } from '../../context/StudioContext';
 import { useAuth } from '../../context/AuthContext';
-import { saveActivity, updateActivity } from '../../services/firestoreService';
+import { saveActivity, updateActivity, getMagicLinksForActivity } from '../../services/firestoreService';
 import { trackTokenUsage } from '../../services/tokenService';
 import { BuildLogEntry } from '../../types';
 
@@ -11,7 +11,7 @@ import {
   Check, RefreshCw, Wand2, Key, Printer, Edit3,
   Bold, Italic, List, Maximize2, Minimize2, Save,
   Info, SplitSquareHorizontal, Sparkles, FileText, ChevronDown,
-  Clock, Bot, User, ChevronUp, Scissors, TrendingUp, Layers, Zap, Users, Globe
+  Clock, Bot, User, ChevronUp, Scissors, TrendingUp, Layers, Zap, Users, Globe, Link
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -49,10 +49,23 @@ const parseInteractiveData = (rawContent: string) => {
   try {
     if (!rawContent) return null;
     
-    const match = rawContent.match(/---INTERACTIVE DATA---[\s\S]*?```json\s*([\s\S]*?)\s*```/i);
-    if (!match || !match[1]) return null;
-    
-    const parsed = JSON.parse(match[1].trim());
+    // Support both fenced (```json...```) and raw JSON after the marker
+    let jsonString: string | null = null;
+    const fencedMatch = rawContent.match(/---INTERACTIVE DATA---[\s\S]*?```json\s*([\s\S]*?)\s*```/i);
+    if (fencedMatch?.[1]) {
+      jsonString = fencedMatch[1].trim();
+    } else {
+      // Raw JSON: find the first { after ---INTERACTIVE DATA--- and extract the whole object
+      const markerIdx = rawContent.search(/---INTERACTIVE DATA---/i);
+      if (markerIdx !== -1) {
+        const afterMarker = rawContent.slice(markerIdx);
+        const braceMatch = afterMarker.match(/(\{[\s\S]*\})/);
+        if (braceMatch?.[1]) jsonString = braceMatch[1].trim();
+      }
+    }
+    if (!jsonString) return null;
+
+    const parsed = JSON.parse(jsonString);
     if (!parsed.questions || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
       return null;
     }
@@ -357,7 +370,26 @@ export const WorkbenchPanel: React.FC = () => {
   const [pendingDiff, setPendingDiff] = useState<{original: string, new: string, summary: string} | null>(null);
   const [pendingEnhancementType, setPendingEnhancementType] = useState<string | null>(null);
   const [showBuildLog, setShowBuildLog] = useState(false);
-  
+  const [magicLinkInfo, setMagicLinkInfo] = useState<{ responseCount: number; linkCount: number } | null>(null);
+
+  // Load magic link info when an activity is loaded
+  useEffect(() => {
+    const item = workbench?.[0] as any;
+    if (item?.id && !item.id.startsWith('w-')) {
+      getMagicLinksForActivity(item.id).then((links: any[]) => {
+        const activeLinks = links.filter((l: any) => l.isActive !== false);
+        const totalResponses = activeLinks.reduce((sum: number, l: any) => sum + (l.responsesCount || 0), 0);
+        if (activeLinks.length > 0) {
+          setMagicLinkInfo({ responseCount: totalResponses, linkCount: activeLinks.length });
+        } else {
+          setMagicLinkInfo(null);
+        }
+      }).catch(() => setMagicLinkInfo(null));
+    } else {
+      setMagicLinkInfo(null);
+    }
+  }, [workbench?.[0]?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Hydrate workbench from navigation state (editActivity)
   useEffect(() => {
     const state = location.state as { editActivity?: any };
@@ -659,6 +691,18 @@ export const WorkbenchPanel: React.FC = () => {
         </div>
       </div>
       
+      {/* Magic link status banner */}
+      {magicLinkInfo && (
+        <div className="bg-blue-50 border-b border-blue-100 px-6 py-2.5 flex items-center gap-2.5 shrink-0">
+          <Link size={13} className="text-blue-400 shrink-0" />
+          <p className="text-[10px] font-bold text-blue-600 leading-relaxed">
+            {magicLinkInfo.responseCount > 0
+              ? `${magicLinkInfo.responseCount} student response${magicLinkInfo.responseCount !== 1 ? 's' : ''} received via magic link. Edits here don't affect their results — the link is frozen at creation.`
+              : `This activity has an active magic link. Edits here won't affect what students see — the link is frozen at creation.`}
+          </p>
+        </div>
+      )}
+
       {/* 2. MAIN SCROLLABLE WORKSPACE */}
       <>
         <EditorToolbar onCmd={execCmd} isEditing={isEditing} toggleEdit={() => setIsEditing(!isEditing)} />
