@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useStudio } from '../../context/StudioContext';
 import { useAuth } from '../../context/AuthContext';
-import { saveActivity, updateActivity, getMagicLinksForActivity } from '../../services/firestoreService';
+import { saveActivity, updateActivity, getMagicLinksForActivity, writePoolSignal } from '../../services/firestoreService';
 import { trackTokenUsage } from '../../services/tokenService';
 import { BuildLogEntry } from '../../types';
 
@@ -496,6 +496,29 @@ export const WorkbenchPanel: React.FC = () => {
     toast.success("Changes Applied");
   };
 
+  // ── Signal helpers ──────────────────────────────────────────────────────────
+  const computeEditDepth = (original: string, edited: string): number => {
+    const strip = (s: string) => s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    const a = strip(original);
+    const b = strip(edited);
+    const maxLen = Math.max(a.length, b.length);
+    if (maxLen === 0) return 0;
+    const minLen = Math.min(a.length, b.length);
+    let matching = 0;
+    for (let i = 0; i < minLen; i++) { if (a[i] === b[i]) matching++; }
+    return parseFloat((1 - matching / maxLen).toFixed(3));
+  };
+
+  const extractStudentSection = (raw: string): string => {
+    const marker = '---STUDENT CONTENT---';
+    const ends = ['---ANSWER KEY---', '---INTERACTIVE DATA---', '---END---'];
+    const start = raw.indexOf(marker);
+    if (start === -1) return raw.split('---INTERACTIVE DATA---')[0];
+    const after = raw.slice(start + marker.length);
+    const endIdx = ends.reduce((min, m) => { const i = after.indexOf(m); return i !== -1 && i < min ? i : min; }, after.length);
+    return after.slice(0, endIdx).trim();
+  };
+
   const processSave = async (targetStatus: 'draft' | 'approved') => {
     if (!user || !activeItem || !parsed) return;
     setIsSaving(true);
@@ -565,6 +588,21 @@ export const WorkbenchPanel: React.FC = () => {
           await updateActivity(activeItem.id, payload);
           const updatedItem = { ...item, ...payload, status: targetStatus, title: finalTitle };
           updateWorkbench(updatedItem);
+      }
+
+      // ── Signal capture (publish only, non-blocking) ──────────────────────
+      if (targetStatus === 'approved') {
+        const originalStudentContent = extractStudentSection(activeItem.content || '');
+        const editedStudentContent   = payload.studentContent || '';
+        const depth = computeEditDepth(originalStudentContent, editedStudentContent);
+        writePoolSignal(user.uid, {
+          signalType: depth < 0.02 ? 'activity_accepted' : 'activity_edited',
+          materialId:  payload.source?.bookTitle || null,
+          cefrLevel:   payload.level || null,
+          activityType: payload.activityType || null,
+          itemA:       null,
+          editDepth:   depth < 0.02 ? null : depth,
+        });
       }
 
       if (targetStatus === 'draft') {
