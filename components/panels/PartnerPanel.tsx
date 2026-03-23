@@ -92,14 +92,27 @@ export const PartnerPanel: React.FC = () => {
   ].filter(Boolean);
 
   const renderCleanPreview = (rawText: string) => {
-    const textOnly  = rawText.split('---INTERACTIVE DATA---')[0];
-    const cleanText = textOnly
-      .replace(/---TYPE:/g,              '\n\n**TYPE:**')
-      .replace(/---TEACHER NOTES---/g,   '\n\n**TEACHER NOTES**\n')
-      .replace(/---STUDENT CONTENT---/g, '\n\n**STUDENT CONTENT**\n')
-      .replace(/---ANSWER KEY---/g,      '\n\n**ANSWER KEY**\n')
-      .replace(/---TITLE---/g,           '\n# ');
-    return { __html: marked.parse(cleanText) };
+    const contentMarker = '---STUDENT CONTENT---';
+    const endMarkers = ['---ANSWER KEY---', '---INTERACTIVE DATA---', '---END---'];
+
+    let studentContent = rawText;
+    const startIdx = rawText.indexOf(contentMarker);
+    if (startIdx !== -1) {
+      const afterMarker = rawText.slice(startIdx + contentMarker.length);
+      const endIdx = endMarkers.reduce((min, m) => {
+        const i = afterMarker.indexOf(m);
+        return i !== -1 && i < min ? i : min;
+      }, afterMarker.length);
+      studentContent = afterMarker.slice(0, endIdx).trim();
+    } else {
+      studentContent = rawText.split('---INTERACTIVE DATA---')[0].trim();
+    }
+
+    try {
+      return { __html: marked.parse(studentContent, { async: false }) as string };
+    } catch {
+      return { __html: studentContent.replace(/\n/g, '<br/>') };
+    }
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
