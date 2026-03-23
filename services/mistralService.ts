@@ -115,7 +115,8 @@ export const draftResponse = async (
   userId: string,
   userEmail: string | null,
   activityConfig?: { questionCount: number; questionFormat: string },
-  activityTypeMeta?: { templateInstruction: string; typeId: string; typeName: string; format: string; category: string }
+  activityTypeMeta?: { templateInstruction: string; typeId: string; typeName: string; format: string; category: string },
+  excludedPoolItems?: string[]
 ): Promise<{ content: string; narration: any | null }> => {
   try {
     const sourceContext = sources.map((s, i) => {
@@ -148,9 +149,13 @@ Text Pool: ${(data.ocrTexts || []).join('\n\n')}`;
       ? `ACTIVITY SPECIFICATION: ${activityTypeMeta.templateInstruction}\n\n`
       : '';
 
+    const excludedNote = excludedPoolItems?.length
+      ? `\n\nEXCLUDED POOL ITEMS — do NOT use these in the activity: ${excludedPoolItems.join(', ')}`
+      : '';
+
     const prompt = typeSpec + (type === 'Custom'
-      ? partnerInput
-      : `Draft a ${type} activity. Teacher instructions: ${partnerInput || 'Use the source material to create an appropriate activity.'}${activityConfig ? ` Format: ${activityConfig.questionFormat}, Questions: ${activityConfig.questionCount}` : ''}`);
+      ? partnerInput + excludedNote
+      : `Draft a ${type} activity. Teacher instructions: ${partnerInput || 'Use the source material to create an appropriate activity.'}${activityConfig ? ` Format: ${activityConfig.questionFormat}, Questions: ${activityConfig.questionCount}` : ''}${excludedNote}`);
 
     const response = await fetch('/.netlify/functions/ai-draft', {
       method: 'POST',
@@ -252,5 +257,4 @@ export const convertToInteractive = async (
     return null;
   }
 };
-
 
