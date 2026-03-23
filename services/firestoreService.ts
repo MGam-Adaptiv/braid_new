@@ -416,6 +416,38 @@ export const saveStudentResponse = async (response: { magicLinkId: string, stude
   }
 };
 
+// ── SIGNAL CAPTURE ───────────────────────────────────────────────────────────
+// Silent instrumentation — no UI effect, non-blocking
+export const writePoolSignal = async (
+  uid: string,
+  signal: {
+    signalType: 'item_excluded' | 'item_swapped' | 'item_promoted' | 'activity_accepted' | 'activity_edited';
+    materialId?: string | null;
+    cefrLevel?: string | null;
+    activityType?: string | null;
+    itemA?: string | null;
+    itemB?: string | null;
+    editDepth?: number | null;
+  }
+): Promise<void> => {
+  try {
+    await db.collection('users').doc(uid).collection('poolSignals').add({
+      teacherId: uid,
+      timestamp: serverTimestamp(),
+      signalType: signal.signalType,
+      materialId:  signal.materialId  ?? null,
+      cefrLevel:   signal.cefrLevel   ?? null,
+      activityType: signal.activityType ?? null,
+      itemA:       signal.itemA       ?? null,
+      itemB:       signal.itemB       ?? null,
+      editDepth:   signal.editDepth   ?? null,
+    });
+  } catch (e) {
+    // Non-critical — never surface to user
+    console.warn('[Signal] writePoolSignal failed:', e);
+  }
+};
+
 export const revokeMagicLink = async (linkId: string): Promise<void> => {
   try {
     await db.collection('magicLinks').doc(linkId).update({ isActive: false });
