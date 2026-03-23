@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, Check, FileText, Play, ChevronDown, Plus, RefreshCw, Link, Trash2, AlertCircle } from 'lucide-react';
 import { Activity, ClassTag } from '../../types';
+import { ACTIVITY_TYPES } from '../../constants/activityTypes';
 import { useAuth } from '../../context/AuthContext';
 import { createMagicLink, getClassTags, getMagicLinksForActivity, updateActivity, revokeMagicLink } from '../../services/firestoreService';
 import { convertToInteractive } from '../../services/mistralService';
@@ -23,7 +24,13 @@ export const ShareActivityModal: React.FC<ShareActivityModalProps> = ({
   const NON_INTERACTIVE_KEYWORDS = ['speaking', 'writing', 'discussion'];
   const activityTypeStr = (activity?.activityType || (activity as any)?.activityTypeName || activity?.type || '').toLowerCase();
   const isNonInteractive = NON_INTERACTIVE_KEYWORDS.some(k => activityTypeStr.includes(k));
-  const isPrintOnly = isNonInteractive || (activity as any)?.activityFormat === 'print';
+  const matchedType = ACTIVITY_TYPES.find(t =>
+    t.id === (activity as any)?.activityType ||
+    t.name === (activity as any)?.activityType ||
+    t.id === (activity as any)?.activityTypeName ||
+    t.name === (activity as any)?.activityTypeName
+  );
+  const isPrintOnly = matchedType?.format === 'print' || isNonInteractive || (activity as any)?.activityFormat === 'print';
 
   const [activeTab, setActiveTab]           = useState<'print' | 'interactive' | 'manage'>(isPrintOnly ? 'print' : 'interactive');
   const [collectName, setCollectName]       = useState(true);
@@ -437,4 +444,3 @@ export const ShareActivityModal: React.FC<ShareActivityModalProps> = ({
     </div>
   );
 };
-
