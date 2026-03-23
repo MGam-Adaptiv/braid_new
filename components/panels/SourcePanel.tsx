@@ -52,10 +52,11 @@ interface SourcePanelProps { layout?: 'vertical' | 'horizontal'; }
 export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' }) => {
   const { user, userProfile } = useAuth();
   const location = useLocation();
-  const { addSource, workflowStage, setWorkflowStage, setCombinedExtraction, combinedExtraction } = useStudio();
+  const { addSource, workflowStage, setWorkflowStage, setCombinedExtraction, combinedExtraction, excludedPoolItems, togglePoolItemExclusion } = useStudio();
 
   const [pages, setPages] = useState<PageItem[]>([]);
   const [stage, setStage] = useState<PanelStage>('IDLE');
+  const [dossierTab, setDossierTab] = useState<'sources' | 'pool'>('sources');
   const [isLoading, setIsLoading] = useState(false);
   
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -204,76 +205,182 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
   const isHorizontal = layout === 'horizontal';
   
   if (workflowStage === 'drafting' || workflowStage === 'approved') {
-     return (
-      <div className={`h-full flex ${isHorizontal ? 'flex-row items-center px-6 gap-8' : 'flex-col p-6'} bg-white overflow-hidden border-r border-gray-100`}>
-        <div className="flex flex-col w-full h-full space-y-4">
-           {/* DOSSIER HEADER */}
-           <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+    const poolVocab = combinedExtraction?.vocabulary || coreVocab;
+    const poolGrammar = combinedExtraction?.grammar || coreGrammar;
+    const excludedCount = excludedPoolItems.length;
+
+    return (
+      <div className={`h-full flex ${isHorizontal ? 'flex-row items-center px-6 gap-8' : 'flex-col'} bg-white overflow-hidden border-r border-gray-100`}>
+        <div className="flex flex-col w-full h-full">
+
+          {/* DOSSIER HEADER */}
+          <div className="px-5 pt-5 pb-3 border-b border-gray-100 shrink-0">
+            <div className="flex items-center justify-between mb-3">
               <h3 className="font-black text-gray-900 uppercase text-xs tracking-widest flex items-center gap-2">
                 <FolderOpen className="text-coral" size={14} /> Active Material
               </h3>
               <button onClick={() => { setStage('TAGGING'); setWorkflowStage('tagging'); }} className="text-[9px] font-black uppercase tracking-widest text-coral hover:underline flex items-center gap-1">
                 <Edit3 size={10} /> Edit
               </button>
-           </div>
+            </div>
+            {/* Tab bar */}
+            <div className="flex bg-gray-100 rounded-xl p-0.5 gap-0.5">
+              <button
+                onClick={() => setDossierTab('sources')}
+                className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${dossierTab === 'sources' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                Sources
+              </button>
+              <button
+                onClick={() => setDossierTab('pool')}
+                className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 ${dossierTab === 'pool' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                Pool
+                {excludedCount > 0 && (
+                  <span className="bg-amber-400 text-white text-[7px] font-black rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                    {excludedCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
 
-           <div className="flex-1 flex flex-col gap-4 overflow-y-auto no-scrollbar">
-              {/* BOOK CARD */}
-              <div className="flex gap-4 p-4 bg-gray-50 border border-gray-200 rounded-2xl">
-                 <div className="w-16 h-20 bg-white rounded-lg border border-gray-200 shadow-sm flex items-center justify-center shrink-0">
+          <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-4">
+
+            {/* ── SOURCES TAB ── */}
+            {dossierTab === 'sources' && (
+              <div className="space-y-4">
+                <div className="flex gap-4 p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+                  <div className="w-16 h-20 bg-white rounded-lg border border-gray-200 shadow-sm flex items-center justify-center shrink-0">
                     <Book className="text-gray-300" />
-                 </div>
-                 <div>
+                  </div>
+                  <div>
                     <h4 className="font-black text-gray-900 text-sm uppercase leading-tight mb-1">{formBookTitle || 'Untitled'}</h4>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{formPublisher}</p>
                     <div className="flex gap-2">
-                        <span className="px-2 py-1 bg-white border border-gray-200 rounded text-[9px] font-bold text-gray-500 uppercase">{selectedLevel}</span>
-                        <span className="px-2 py-1 bg-white border border-gray-200 rounded text-[9px] font-bold text-gray-500 uppercase">{pages.length} Pages</span>
+                      <span className="px-2 py-1 bg-white border border-gray-200 rounded text-[9px] font-bold text-gray-500 uppercase">{selectedLevel}</span>
+                      <span className="px-2 py-1 bg-white border border-gray-200 rounded text-[9px] font-bold text-gray-500 uppercase">{pages.length} Pages</span>
                     </div>
-                 </div>
-              </div>
-
-              {/* STATS */}
-              <div className="grid grid-cols-2 gap-2">
-                 <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-center">
-                    <div className="text-xl font-black text-blue-600">{coreVocab.length}</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-center">
+                    <div className="text-xl font-black text-blue-600">{poolVocab.length}</div>
                     <div className="text-[8px] font-bold text-blue-400 uppercase tracking-widest">Vocab</div>
-                 </div>
-                 <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-center">
-                    <div className="text-xl font-black text-amber-600">{coreGrammar.length}</div>
+                  </div>
+                  <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-center">
+                    <div className="text-xl font-black text-amber-600">{poolGrammar.length}</div>
                     <div className="text-[8px] font-bold text-amber-400 uppercase tracking-widest">Grammar</div>
-                 </div>
-              </div>
-
-              {/* PAGES GRID */}
-              <div>
-                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1"><Layers size={10}/> Pages</p>
-                 <div className="grid grid-cols-4 gap-2">
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1"><Layers size={10}/> Pages</p>
+                  <div className="grid grid-cols-4 gap-2">
                     {pages.map((p, i) => (
-                      <div key={p.id} className="aspect-[3/4] border border-gray-200 rounded-lg overflow-hidden relative shadow-sm cursor-pointer hover:ring-2 hover:ring-coral/20 transition-all bg-gray-50 flex items-center justify-center">
-                         {p.blobUrl ? (
-                           <img src={p.blobUrl} className="w-full h-full object-cover" />
-                         ) : (
-                           <div className="flex flex-col items-center justify-center text-gray-300">
-                             <File size={16} />
-                             <span className="text-[8px] font-bold mt-1">Pg {i+1}</span>
-                           </div>
-                         )}
-                         <div className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[8px] font-bold text-center py-0.5 truncate px-1">{p.unitTags[0] || `Pg ${i+1}`}</div>
+                      <div key={p.id} className="aspect-[3/4] border border-gray-200 rounded-lg overflow-hidden relative shadow-sm bg-gray-50 flex items-center justify-center">
+                        {p.blobUrl ? (
+                          <img src={p.blobUrl} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-gray-300">
+                            <File size={16} />
+                            <span className="text-[8px] font-bold mt-1">Pg {i+1}</span>
+                          </div>
+                        )}
+                        <div className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[8px] font-bold text-center py-0.5 truncate px-1">{p.unitTags[0] || `Pg ${i+1}`}</div>
                       </div>
                     ))}
-                 </div>
+                  </div>
+                </div>
               </div>
-           </div>
-           
-           <div className="pt-2 border-t border-gray-100">
-             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <p className="text-[8px] text-gray-400 font-medium leading-relaxed text-justify italic">{DISCLAIMER_TEXT}</p>
-             </div>
-           </div>
+            )}
+
+            {/* ── POOL TAB ── */}
+            {dossierTab === 'pool' && (
+              <div className="space-y-5">
+                <p className="text-[9px] text-gray-400 leading-relaxed">
+                  Tap any item to exclude it from the next generation. Excluded items are skipped by the AI.
+                </p>
+
+                {/* Vocabulary */}
+                {poolVocab.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Vocabulary</p>
+                      <span className="text-[8px] font-bold text-gray-300">{poolVocab.length - poolVocab.filter(v => excludedPoolItems.includes(v)).length} active</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {poolVocab.map(item => {
+                        const excluded = excludedPoolItems.includes(item);
+                        return (
+                          <button
+                            key={item}
+                            onClick={() => togglePoolItemExclusion(item)}
+                            className={`px-2.5 py-1 rounded-full text-[9px] font-bold transition-all border ${
+                              excluded
+                                ? 'bg-gray-50 text-gray-300 border-gray-100 line-through'
+                                : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'
+                            }`}
+                          >
+                            {item}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Grammar */}
+                {poolGrammar.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Grammar</p>
+                      <span className="text-[8px] font-bold text-gray-300">{poolGrammar.length - poolGrammar.filter(g => excludedPoolItems.includes(g)).length} active</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {poolGrammar.map(item => {
+                        const excluded = excludedPoolItems.includes(item);
+                        return (
+                          <button
+                            key={item}
+                            onClick={() => togglePoolItemExclusion(item)}
+                            className={`px-2.5 py-1 rounded-full text-[9px] font-bold transition-all border ${
+                              excluded
+                                ? 'bg-gray-50 text-gray-300 border-gray-100 line-through'
+                                : 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100'
+                            }`}
+                          >
+                            {item}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {poolVocab.length === 0 && poolGrammar.length === 0 && (
+                  <p className="text-[10px] text-gray-300 text-center py-8 font-bold uppercase tracking-widest">No pool items extracted</p>
+                )}
+
+                {excludedCount > 0 && (
+                  <button
+                    onClick={() => excludedPoolItems.forEach(item => togglePoolItemExclusion(item))}
+                    className="w-full py-2 text-[9px] font-black uppercase tracking-widest text-amber-500 hover:text-amber-700 border border-amber-100 rounded-xl transition-colors"
+                  >
+                    Restore all ({excludedCount} excluded)
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="px-5 pb-4 pt-2 border-t border-gray-100 shrink-0">
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <p className="text-[8px] text-gray-400 font-medium leading-relaxed text-justify italic">{DISCLAIMER_TEXT}</p>
+            </div>
+          </div>
         </div>
       </div>
-     )
+    );
   }
 
   return (
