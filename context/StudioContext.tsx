@@ -71,6 +71,10 @@ interface StudioContextType {
   setGrammarFocus: (v: string) => void;
   wordBankEnabled: boolean;
   setWordBankEnabled: React.Dispatch<React.SetStateAction<boolean>>;
+
+  // Pool Panel
+  excludedPoolItems: string[];
+  togglePoolItemExclusion: (item: string) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -101,6 +105,13 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [selectedActivityTypeId, setSelectedActivityTypeId] = useState<string | null>(null);
   const [grammarFocus, setGrammarFocus] = useState<string>('');
   const [wordBankEnabled, setWordBankEnabled] = useState(true);
+
+  // Pool Panel
+  const [excludedPoolItems, setExcludedPoolItems] = useState<string[]>([]);
+  const togglePoolItemExclusion = (item: string) =>
+    setExcludedPoolItems(prev =>
+      prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
+    );
 
   const addToWorkbench = (item: WorkbenchItem) => {
     setWorkbench(prev => [item, ...prev]);
@@ -202,7 +213,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } : undefined;
 
     try {
-      const result = await draftResponse(type, partnerInput, sources, workbench, user.uid, user.email, activityConfig, activityTypeMeta);
+      const result = await draftResponse(type, partnerInput, sources, workbench, user.uid, user.email, activityConfig, activityTypeMeta, excludedPoolItems);
       setDraftContent(result.content);
       setDraftNarration(result.narration);
       addMessage({ id: Date.now().toString(), role: 'partner', text: result.content, timestamp: Date.now() });
@@ -317,6 +328,8 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setGrammarFocus,
       wordBankEnabled,
       setWordBankEnabled,
+      excludedPoolItems,
+      togglePoolItemExclusion,
     }}>
       {children}
     </StudioContext.Provider>
