@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Workspace, ChatMessage, WorkbenchItem, SourceMaterial, PageSource, WorkflowStage } from '../types';
 import { useAuth } from './AuthContext';
-import { uploadPage } from '../services/firestoreService';
+import { uploadPage, writePoolSignal } from '../services/firestoreService';
 import { draftResponse, refineDraft } from '../services/mistralService';
 import { ACTIVITY_TYPES } from '../constants/activityTypes';
 import toast from 'react-hot-toast';
@@ -108,10 +108,22 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Pool Panel
   const [excludedPoolItems, setExcludedPoolItems] = useState<string[]>([]);
-  const togglePoolItemExclusion = (item: string) =>
-    setExcludedPoolItems(prev =>
-      prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
-    );
+  const togglePoolItemExclusion = (item: string) => {
+    setExcludedPoolItems(prev => {
+      const isExcluded = prev.includes(item);
+      if (!isExcluded && user) {
+        // Fire signal only when EXCLUDING (not when restoring)
+        writePoolSignal(user.uid, {
+          signalType: 'item_excluded',
+          materialId: combinedExtraction?.allTags?.bookTitle || null,
+          cefrLevel: combinedExtraction?.level || null,
+          activityType: null,
+          itemA: item,
+        });
+      }
+      return isExcluded ? prev.filter(i => i !== item) : [...prev, item];
+    });
+  };
 
   const addToWorkbench = (item: WorkbenchItem) => {
     setWorkbench(prev => [item, ...prev]);
