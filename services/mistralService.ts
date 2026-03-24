@@ -160,7 +160,7 @@ Text Pool: ${(data.ocrTexts || []).join('\n\n')}`;
     const response = await fetch('/.netlify/functions/ai-draft', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, sourceContext, workbenchContext })
+      body: JSON.stringify({ prompt, sourceContext, workbenchContext, exerciseCount: activityConfig?.questionCount })
     });
 
     if (!response.ok) throw new Error(`Drafting failed: ${response.status}`);
@@ -257,4 +257,5 @@ export const convertToInteractive = async (
     return null;
   }
 };
+
 
