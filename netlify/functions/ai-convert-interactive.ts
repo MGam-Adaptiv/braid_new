@@ -110,7 +110,7 @@ FILL-BLANK SPECIFIC RULES:
 - The student must be able to see the complete sentence. Do NOT use generic labels like "Gap 1", "Gap 2" — these are useless without context.
 - Set "context" to null for fill-blank questions (the sentence is already in "question").
 - Set "correctAnswer" to the exact word or phrase from the answer key that fills that blank.
-- EXACTLY ONE BLANK PER QUESTION: Each fill-blank question object must contain EXACTLY ONE ___ blank. If a sentence has two gaps, create two separate question objects — one per blank, each with its own correctAnswer. Never put two ___ in a single question string.
+- ABSOLUTE RULE — ONE BLANK PER QUESTION: Each fill-blank question object must contain EXACTLY ONE ___ blank. Count the blanks in every sentence before finalising. If a sentence has two gaps, you MUST split it into two separate question objects — one per blank, each with its own correctAnswer. A sentence with two ___ is a critical error. Never put two ___ in a single question string.
 - PASSAGE WITH EMBEDDED GAPS: If the content is a continuous reading passage with numbered gaps like "(1)", "(2)" or "___1", "___2" inside sentences, you MUST:
   1. Find the complete sentence that contains each gap number.
   2. Replace the gap marker in that sentence with ___ to create the "question" field.
@@ -230,3 +230,4 @@ ${answerKey}
 };
 
 export { handler };
+
