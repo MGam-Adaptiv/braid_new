@@ -406,7 +406,7 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
               <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-5">
                  <h3 className="font-black text-gray-900 uppercase text-xs tracking-widest">Book Info</h3>
                  <input value={formBookTitle} onChange={e => setFormBookTitle(e.target.value)} className="w-full p-3 border border-gray-200 bg-white text-gray-900 rounded-xl font-bold text-sm outline-none focus:border-coral" placeholder="Book Title" />
-                 <div className="flex gap-2">{['Pre-A1','A1','A2','B1','B2','C1'].map(l => <button key={l} onClick={() => setSelectedLevel(l)} className={`flex-1 py-2 rounded-lg font-bold text-xs ${selectedLevel === l ? 'bg-coral text-white' : 'bg-gray-50'}`}>{l}</button>)}</div>
+                 <div className="flex gap-2">{['Pre-A1','A1','A2','B1','B2','C1','C2'].map(l => <button key={l} onClick={() => setSelectedLevel(l)} className={`flex-1 py-2 rounded-lg font-bold text-xs ${selectedLevel === l ? 'bg-coral text-white' : 'bg-gray-50'}`}>{l}</button>)}</div>
               </div>
               
               <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
