@@ -254,7 +254,8 @@ export const TestPage: React.FC = () => {
   const handleSubmit = async () => {
     if (isSubmitting) return;
 
-    const answeredCount = Object.keys(answers).length;
+    // Multi-blank questions store answers as "${id}_${blankIndex}" — count unique base IDs
+    const answeredCount = new Set(Object.keys(answers).map(k => String(k).replace(/_\d+$/, ''))).size;
     if (answeredCount < questions.length && !showIncompleteWarning) {
       setShowIncompleteWarning(true);
       return;
@@ -271,11 +272,16 @@ export const TestPage: React.FC = () => {
       await saveStudentResponse({
         magicLinkId: magicLinkId!,
         studentName: studentName || 'Anonymous Student',
-        answers: Object.entries(answers).map(([id, val]) => ({ 
-          questionId: Number(id), 
-          value: val, 
-          isCorrect: isAnswerCorrect(Number(id))
-        })),
+        answers: questions.map(q => {
+          const qText = q.type === 'fill-blank' && (q as any).context ? (q as any).context : q.question;
+          const bCount = q.type === 'fill-blank' ? (qText.match(/___/g) || []).length : 0;
+          if (bCount > 1) {
+            // Multi-blank (AI error safety net): collect each blank's value
+            const vals = Array.from({ length: bCount }, (_, i) => String((answers as any)[`${q.id}_${i}`] || ''));
+            return { questionId: q.id, value: vals.join(' | '), isCorrect: false };
+          }
+          return { questionId: q.id, value: answers[q.id], isCorrect: isAnswerCorrect(q.id) };
+        }),
         score,
         totalQuestions: total,
         submittedAt: Date.now()
@@ -463,7 +469,7 @@ export const TestPage: React.FC = () => {
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{studentName || 'Student Access'}</p>
                  </div>
               </div>
-              <div className="px-4 py-2 bg-white border border-gray-100 rounded-2xl text-[10px] font-black text-gray-500 uppercase tracking-widest shadow-sm">{Object.keys(answers).length} / {questions.length} Answered</div>
+              <div className="px-4 py-2 bg-white border border-gray-100 rounded-2xl text-[10px] font-black text-gray-500 uppercase tracking-widest shadow-sm">{new Set(Object.keys(answers).map(k => String(k).replace(/_\d+$/, ''))).size} / {questions.length} Answered</div>
             </div>
 
             <div className="space-y-6 mb-14">
@@ -482,6 +488,11 @@ export const TestPage: React.FC = () => {
 
                 const availableOptions = q.options && q.options.length > 0 ? q.options : wordBank.length > 0 ? wordBank : [];
 
+                // Multi-blank safety net: detect if AI produced a question with 2+ blanks
+                const questionText = q.type === 'fill-blank' && (q as any).context ? (q as any).context : q.question;
+                const blankCount = q.type === 'fill-blank' ? (questionText.match(/___/g) || []).length : 0;
+                const isMultiBlank = blankCount > 1;
+
                 return (
                   <div key={q.id} className={`bg-white rounded-[28px] p-6 sm:p-8 border-2 transition-all duration-300 flex flex-col gap-4 group ${borderColor}`}>
                     <div className="flex items-start gap-5">
@@ -490,7 +501,10 @@ export const TestPage: React.FC = () => {
                        </span>
                        <div className="flex-1 pt-1.5">
                           <p className={`text-[16px] font-bold uppercase tracking-tight leading-relaxed transition-all duration-300 ${checked && !isOpenEnded ? (correct ? 'text-success/80' : 'text-coral/80') : 'text-gray-700'}`}>
-                            {cleanMd(q.question)}
+                            {/* For fill-blank: show context sentence if available (old links), else question (new links) */}
+                            {q.type === 'fill-blank' && (q as any).context
+                              ? cleanMd((q as any).context)
+                              : cleanMd(q.question)}
                           </p>
                        </div>
                     </div>
@@ -511,7 +525,37 @@ export const TestPage: React.FC = () => {
                           <textarea value={answers[q.id] || ''} onChange={e => setAnswers(p => ({ ...p, [q.id]: e.target.value }))} placeholder="Type your answer..." className="w-full h-24 px-4 py-3 bg-white border-2 border-gray-100 rounded-xl font-medium text-sm outline-none focus:border-coral transition-all resize-none" />
                       )}
 
-                      {(q.type === 'multiple-choice' || q.type === 'fill-blank') && (
+                      {q.type === 'fill-blank' && isMultiBlank ? (
+                        // Safety net: AI produced a double-blank — render one input per ___
+                        <div className="space-y-2">
+                          {Array.from({ length: blankCount }, (_, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest w-14 shrink-0">Blank {i + 1}</span>
+                              {availableOptions.length > 0 ? (
+                                <div className="relative flex-1">
+                                  <select
+                                    value={(answers as any)[`${q.id}_${i}`] || ''}
+                                    onChange={e => { setAnswers(p => ({ ...p, [`${q.id}_${i}`]: e.target.value } as any)); setShowIncompleteWarning(false); }}
+                                    className={`appearance-none w-full h-14 px-6 bg-white border-2 rounded-2xl font-black text-[12px] uppercase tracking-widest outline-none transition-all cursor-pointer ${(answers as any)[`${q.id}_${i}`] ? 'border-coral/20 bg-coral/[0.02] text-coral' : 'border-gray-100 focus:border-coral'}`}
+                                  >
+                                    <option value="">Choose answer...</option>
+                                    {availableOptions.map((opt, idx) => <option key={idx} value={opt} className="text-gray-900">{cleanMd(opt)}</option>)}
+                                  </select>
+                                  <ChevronDown size={16} className={`absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${(answers as any)[`${q.id}_${i}`] ? 'text-coral' : 'text-gray-300'}`} />
+                                </div>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={(answers as any)[`${q.id}_${i}`] || ''}
+                                  onChange={e => { setAnswers(p => ({ ...p, [`${q.id}_${i}`]: e.target.value } as any)); setShowIncompleteWarning(false); }}
+                                  placeholder={`Type blank ${i + 1}...`}
+                                  className="flex-1 h-14 px-6 bg-white border-2 border-gray-100 rounded-2xl font-black text-[12px] uppercase tracking-widest outline-none focus:border-coral transition-all"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (q.type === 'multiple-choice' || q.type === 'fill-blank') && (
                         availableOptions.length > 0 ? (
                           <div className="relative">
                             <select value={answers[q.id] || ''} onChange={e => { setAnswers(p => ({ ...p, [q.id]: e.target.value })); if (magicLink?.mode === 'practice') setCheckedAnswers(p => { const n = {...p}; delete n[q.id]; return n; }); setShowIncompleteWarning(false); }} disabled={magicLink?.mode === 'practice' && checked && correct} className={`appearance-none w-full h-14 px-6 bg-white border-2 rounded-2xl font-black text-[12px] uppercase tracking-widest outline-none transition-all cursor-pointer ${answers[q.id] ? 'border-coral/20 bg-coral/[0.02] text-coral' : 'border-gray-100 focus:border-coral'}`}>
