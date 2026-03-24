@@ -7,6 +7,7 @@ interface RequestBody {
   sourceContext: string;
   workbenchContext: string;
   exerciseCount?: number;
+  cefrLevel?: string;
 }
 
 const handler: Handler = async (event, context) => {
@@ -47,7 +48,7 @@ const handler: Handler = async (event, context) => {
       throw new Error('Missing request body');
     }
 
-    const { prompt, sourceContext, workbenchContext, exerciseCount } = JSON.parse(event.body) as RequestBody;
+    const { prompt, sourceContext, workbenchContext, exerciseCount, cefrLevel } = JSON.parse(event.body) as RequestBody;
 
     if (!prompt) {
       return {
@@ -79,6 +80,8 @@ Your core philosophy is "Human in the loop".
 You provide drafts based on analyzed materials.
 NEVER say "generate". ALWAYS say "draft".
 Keep your tone warm, approachable, and respectful.
+
+TEACHER NOTES LEVEL RULE: In the ---TEACHER NOTES--- section, you MUST state exactly the teacher-selected CEFR level provided in the request. Never infer a different level. Never change it. Use it exactly as given.
 
 CRITICAL: You MUST output in this EXACT structure with these EXACT markers:
 
@@ -118,7 +121,7 @@ CRITICAL: You MUST output in this EXACT structure with these EXACT markers:
 
 TYPE RULES — follow exactly:
 
-fill-blank: "question" = the COMPLETE SENTENCE with ___ where the blank is. Example: "She ___ been waiting for an hour." NEVER write "Gap 1", "Blank 2", or any placeholder label. If the student content has a passage with numbered gaps like (1), (2), find and include the full sentence containing that gap. "correctAnswer" = exact word/phrase. "options" = [] unless word bank exists (then list word bank items in top-level wordBank array). "hint" = verb hint in parentheses if present, else null. "pairs" = null. CRITICAL: Each fill-blank question object must have EXACTLY ONE ___ blank. If a sentence has two gaps, create two separate question objects — one per blank. Never put two ___ in a single question string.
+fill-blank: "question" = the COMPLETE SENTENCE with ___ where the blank is. Example: "She ___ been waiting for an hour." NEVER write "Gap 1", "Blank 2", or any placeholder label. If the student content has a passage with numbered gaps like (1), (2), find and include the full sentence containing that gap. "correctAnswer" = exact word/phrase. "options" = [] unless word bank exists (then list word bank items in top-level wordBank array). "hint" = verb hint in parentheses if present, else null. "pairs" = null. ABSOLUTE RULE: Every question object must contain EXACTLY ONE blank (___). Count the blanks in every sentence before finalising. If a sentence needs two different words, you MUST split it into two separate question objects — one sentence per question, one blank per question. A sentence with two blanks is a critical error. Never do this.
 
 multiple-choice: "question" = question text. "options" = array of 3-4 answer strings (no letter prefixes like A. B. — just the text). "correctAnswer" = the exact text of the correct option (not a letter). "hint" = null. "pairs" = null.
 
@@ -130,13 +133,13 @@ open-ended: "question" = the question text. "options" = []. "correctAnswer" = nu
 
 FOR SPEAKING/WRITING ACTIVITIES: Output {"activityType": "Speaking", "instructions": "Use the prompts below for discussion.", "questions": [], "wordBank": []}
 
-CRITICAL: Every fill-blank question MUST contain a real, complete sentence with exactly one ___. Never use generic labels.]
+ABSOLUTE RULE — ONE BLANK PER QUESTION: Every fill-blank question MUST contain a real, complete sentence with EXACTLY ONE ___. Count the blanks before finalising. If a sentence needs two words, split it into two separate question objects — one per blank. A sentence with two ___ is a critical error. Never use generic labels.]
 
 ---END---`,
         },
         {
           role: 'user',
-          content: `${exerciseCount ? `Generate exactly ${exerciseCount} exercises/questions. Do not generate more or fewer.\n\n` : ''}Context:\n${sourceContext || 'No source context provided.'}\n\nWorkbench:\n${workbenchContext || 'No workbench context provided.'}\n\nUser Request: ${prompt}`,
+          content: `${cefrLevel ? `Teacher-selected CEFR level: ${cefrLevel}. IMPORTANT — In the ---TEACHER NOTES--- section, always use exactly this level: ${cefrLevel}. Never infer a different level.\n\n` : ''}${exerciseCount ? `Generate exactly ${exerciseCount} exercises/questions. Do not generate more or fewer.\n\n` : ''}Context:\n${sourceContext || 'No source context provided.'}\n\nWorkbench:\n${workbenchContext || 'No workbench context provided.'}\n\nUser Request: ${prompt}`,
         },
       ],
       temperature: 0.7,
@@ -186,3 +189,4 @@ CRITICAL: Every fill-blank question MUST contain a real, complete sentence with 
 };
 
 export { handler };
+
