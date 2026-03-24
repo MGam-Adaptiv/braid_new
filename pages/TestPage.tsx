@@ -273,8 +273,8 @@ export const TestPage: React.FC = () => {
         magicLinkId: magicLinkId!,
         studentName: studentName || 'Anonymous Student',
         answers: questions.map(q => {
-          const qText = q.type === 'fill-blank' && (q as any).context ? (q as any).context : q.question;
-          const bCount = q.type === 'fill-blank' ? (qText.match(/___/g) || []).length : 0;
+          const bMatches = q.type === 'fill-blank' ? q.question.match(/___/g) : null;
+          const bCount = bMatches ? bMatches.length : 0;
           if (bCount > 1) {
             // Multi-blank (AI error safety net): collect each blank's value
             const vals = Array.from({ length: bCount }, (_, i) => String((answers as any)[`${q.id}_${i}`] || ''));
@@ -489,8 +489,9 @@ export const TestPage: React.FC = () => {
                 const availableOptions = q.options && q.options.length > 0 ? q.options : wordBank.length > 0 ? wordBank : [];
 
                 // Multi-blank safety net: detect if AI produced a question with 2+ blanks
-                const questionText = q.type === 'fill-blank' && (q as any).context ? (q as any).context : q.question;
-                const blankCount = q.type === 'fill-blank' ? (questionText.match(/___/g) || []).length : 0;
+                // Match ONLY the exact ___ (three underscores) marker — nothing more, nothing less
+                const blankMatches = q.question.match(/___/g);
+                const blankCount = blankMatches ? blankMatches.length : 1;
                 const isMultiBlank = blankCount > 1;
 
                 return (
