@@ -121,7 +121,7 @@ CRITICAL: You MUST output in this EXACT structure with these EXACT markers:
 
 TYPE RULES — follow exactly:
 
-fill-blank: "question" = the COMPLETE SENTENCE with ___ where the blank is. Example: "She ___ been waiting for an hour." NEVER write "Gap 1", "Blank 2", or any placeholder label. If the student content has a passage with numbered gaps like (1), (2), find and include the full sentence containing that gap. "correctAnswer" = exact word/phrase. "options" = [] unless word bank exists (then list word bank items in top-level wordBank array). "hint" = verb hint in parentheses if present, else null. "pairs" = null. ABSOLUTE RULE: Every question object must contain EXACTLY ONE blank (___). Count the blanks in every sentence before finalising. If a sentence needs two different words, you MUST split it into two separate question objects — one sentence per question, one blank per question. A sentence with two blanks is a critical error. Never do this.
+fill-blank: "question" = the COMPLETE SENTENCE with ___ where the blank is. The blank marker is ALWAYS exactly ___ (three underscores — no more, no fewer). Example: "She ___ been waiting for an hour." NEVER write "Gap 1", "Blank 2", or any placeholder label. If the student content has a passage with numbered gaps like (1), (2), find and include the full sentence containing that gap. "correctAnswer" = exact word/phrase. "options" = [] unless word bank exists (then list word bank items in top-level wordBank array). "hint" = verb hint in parentheses if present, else null. "pairs" = null. ABSOLUTE RULE — ONE BLANK PER QUESTION: Every question object must contain EXACTLY ONE blank (___). Count the blanks in every sentence before finalising. If a sentence needs two different words, you MUST split it into two separate question objects — one sentence per question, one blank per question. A sentence with two ___ is a critical error — this will break the student interface. Never do this under any circumstances.
 
 multiple-choice: "question" = question text. "options" = array of 3-4 answer strings (no letter prefixes like A. B. — just the text). "correctAnswer" = the exact text of the correct option (not a letter). "hint" = null. "pairs" = null.
 
@@ -133,7 +133,7 @@ open-ended: "question" = the question text. "options" = []. "correctAnswer" = nu
 
 FOR SPEAKING/WRITING ACTIVITIES: Output {"activityType": "Speaking", "instructions": "Use the prompts below for discussion.", "questions": [], "wordBank": []}
 
-ABSOLUTE RULE — ONE BLANK PER QUESTION: Every fill-blank question MUST contain a real, complete sentence with EXACTLY ONE ___. Count the blanks before finalising. If a sentence needs two words, split it into two separate question objects — one per blank. A sentence with two ___ is a critical error. Never use generic labels.]
+ABSOLUTE RULE — ONE BLANK PER QUESTION: Every fill-blank question MUST contain a real, complete sentence with EXACTLY ONE ___ (three underscores). Count the blanks in EVERY sentence before finalising — do not skip this check. If a sentence needs two different words, you MUST split it into two separate question objects — one per blank, each with its own correctAnswer. A sentence with two ___ is a critical error that breaks the student interface. Never produce this under any circumstances. The blank marker is always exactly ___ — never __ (two underscores), never ____ (four), always exactly three.]
 
 ---END---`,
         },
@@ -189,4 +189,5 @@ ABSOLUTE RULE — ONE BLANK PER QUESTION: Every fill-blank question MUST contain
 };
 
 export { handler };
+
 
