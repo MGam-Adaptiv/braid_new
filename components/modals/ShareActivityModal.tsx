@@ -3,7 +3,7 @@ import { X, Copy, Check, FileText, Play, ChevronDown, Plus, RefreshCw, Link, Tra
 import { Activity, ClassTag } from '../../types';
 import { ACTIVITY_TYPES } from '../../constants/activityTypes';
 import { useAuth } from '../../context/AuthContext';
-import { createMagicLink, getClassTags, getMagicLinksForActivity, updateActivity, revokeMagicLink } from '../../services/firestoreService';
+import { createMagicLink, getClassTags, getMagicLinksForActivity, getResponsesForMagicLink, updateActivity, revokeMagicLink } from '../../services/firestoreService';
 import { convertToInteractive } from '../../services/mistralService';
 import toast from 'react-hot-toast';
 
@@ -64,9 +64,21 @@ export const ShareActivityModal: React.FC<ShareActivityModalProps> = ({
     if (!activity?.id) return;
     try {
       const links = await getMagicLinksForActivity(activity.id);
-      setAllLinks(links || []);
+      // Count responses from subcollection directly — don't trust responsesCount field
+      // (unauthenticated students can't update the parent doc, so the field stays 0)
+      const linksWithCounts = await Promise.all(
+        (links || []).map(async (link: any) => {
+          try {
+            const responses = await getResponsesForMagicLink(link.id);
+            return { ...link, responsesCount: responses.length };
+          } catch {
+            return link; // fallback to stored value if query fails
+          }
+        })
+      );
+      setAllLinks(linksWithCounts);
       // Pre-fill latest active link URL
-      const activeLink = (links || []).find((l: any) => l.isActive !== false);
+      const activeLink = linksWithCounts.find((l: any) => l.isActive !== false);
       if (activeLink) {
         setMagicLinkUrl(`https://braid.studio/#/test/${activeLink.id}`);
       }
