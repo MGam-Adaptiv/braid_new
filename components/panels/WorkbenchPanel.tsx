@@ -357,6 +357,7 @@ const AnswerKeySection = ({
 export const WorkbenchPanel: React.FC = () => {
   const { user } = useAuth();
   const { workbench, updateWorkbench, setWorkbench, workflowStage, combinedExtraction, selectedDraftType, draftNarration } = useStudio();
+  console.log('draftNarration:', draftNarration);
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -735,10 +736,10 @@ export const WorkbenchPanel: React.FC = () => {
             <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">
               {draftNarration.activityType}
             </span>
-            {draftNarration.cefrLevel && (
+            {(combinedExtraction?.level || parsed?.level) && (
               <>
                 <span className="text-emerald-300">·</span>
-                <span className="text-[10px] font-bold text-emerald-700">{draftNarration.cefrLevel}</span>
+                <span className="text-[10px] font-bold text-emerald-700">{combinedExtraction?.level || parsed?.level}</span>
               </>
             )}
             {Array.isArray(draftNarration.itemsSelected) && draftNarration.itemsSelected.length > 0 && (
