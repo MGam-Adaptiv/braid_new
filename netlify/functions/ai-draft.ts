@@ -8,6 +8,7 @@ interface RequestBody {
   workbenchContext: string;
   exerciseCount?: number;
   cefrLevel?: string;
+  excludedItems?: string[];
 }
 
 const handler: Handler = async (event, context) => {
@@ -48,7 +49,7 @@ const handler: Handler = async (event, context) => {
       throw new Error('Missing request body');
     }
 
-    const { prompt, sourceContext, workbenchContext, exerciseCount, cefrLevel } = JSON.parse(event.body) as RequestBody;
+    const { prompt, sourceContext, workbenchContext, exerciseCount, cefrLevel, excludedItems } = JSON.parse(event.body) as RequestBody;
 
     if (!prompt) {
       return {
@@ -70,6 +71,7 @@ const handler: Handler = async (event, context) => {
 
     const client = new Mistral({ apiKey });
 
+    console.log('EXCLUDED ITEMS:', JSON.stringify(excludedItems));
     const chatResponse = await client.chat.complete({
       model: 'mistral-small-latest',
       messages: [
@@ -139,7 +141,7 @@ ABSOLUTE RULE — ONE BLANK PER QUESTION: Every fill-blank question MUST contain
         },
         {
           role: 'user',
-          content: `${cefrLevel ? `Teacher-selected CEFR level: ${cefrLevel}. IMPORTANT — In the ---TEACHER NOTES--- section, always use exactly this level: ${cefrLevel}. Never infer a different level.\n\n` : ''}${exerciseCount ? `Generate exactly ${exerciseCount} exercises/questions. Do not generate more or fewer.\n\n` : ''}Context:\n${sourceContext || 'No source context provided.'}\n\nWorkbench:\n${workbenchContext || 'No workbench context provided.'}\n\nUser Request: ${prompt}`,
+          content: `${cefrLevel ? `Teacher-selected CEFR level: ${cefrLevel}. IMPORTANT — In the ---TEACHER NOTES--- section, always use exactly this level: ${cefrLevel}. Never infer a different level.\n\n` : ''}${exerciseCount ? `Generate exactly ${exerciseCount} exercises/questions. Do not generate more or fewer.\n\n` : ''}${excludedItems && excludedItems.length > 0 ? `NEVER use these vocabulary or grammar items anywhere in the activity — not in sentences, not in the word bank, not in examples: ${excludedItems.join(', ')}. This is a hard rule.\n\n` : ''}Context:\n${sourceContext || 'No source context provided.'}\n\nWorkbench:\n${workbenchContext || 'No workbench context provided.'}\n\nUser Request: ${prompt}`,
         },
       ],
       temperature: 0.7,
@@ -189,5 +191,4 @@ ABSOLUTE RULE — ONE BLANK PER QUESTION: Every fill-blank question MUST contain
 };
 
 export { handler };
-
 
