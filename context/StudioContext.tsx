@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 
 export interface CombinedContent {
   vocabulary: string[];
+  secondaryVocabulary?: string[];
   grammar: string[];
   topic: string;
   level: string;
@@ -25,6 +26,17 @@ export interface CombinedContent {
       labelTags: string[];
     }>;
   };
+}
+
+export type CEFRLevel = 'Pre-A1' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+
+export interface PoolItem {
+  term: string;
+  type: 'vocabulary' | 'grammar';
+  subtype: 'core' | 'secondary';
+  cefrLevel: CEFRLevel;
+  pos: string;
+  usageCount: number;
 }
 
 interface StudioContextType {
@@ -72,9 +84,14 @@ interface StudioContextType {
   wordBankEnabled: boolean;
   setWordBankEnabled: React.Dispatch<React.SetStateAction<boolean>>;
 
-  // Pool Panel
-  excludedPoolItems: string[];
-  togglePoolItemExclusion: (item: string) => void;
+  // Pool Panel v2
+  poolItems: PoolItem[];
+  excludedItems: string[];
+  alwaysExcludedItems: string[];
+  excludeItem: (term: string) => void;
+  alwaysExcludeItem: (term: string) => void;
+  restoreItem: (term: string) => void;
+  restoreAll: () => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -106,23 +123,41 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [grammarFocus, setGrammarFocus] = useState<string>('');
   const [wordBankEnabled, setWordBankEnabled] = useState(true);
 
-  // Pool Panel
-  const [excludedPoolItems, setExcludedPoolItems] = useState<string[]>([]);
-  const togglePoolItemExclusion = (item: string) => {
-    setExcludedPoolItems(prev => {
-      const isExcluded = prev.includes(item);
-      if (!isExcluded && user) {
-        // Fire signal only when EXCLUDING (not when restoring)
-        writePoolSignal(user.uid, {
-          signalType: 'item_excluded',
-          materialId: combinedExtraction?.allTags?.bookTitle || null,
-          cefrLevel: combinedExtraction?.level || null,
-          activityType: null,
-          itemA: item,
-        });
-      }
-      return isExcluded ? prev.filter(i => i !== item) : [...prev, item];
+  // Pool Panel v2
+  const [poolItems, setPoolItems] = useState<PoolItem[]>([]);
+  const [excludedItems, setExcludedItems] = useState<string[]>([]);
+  const [alwaysExcludedItems, setAlwaysExcludedItems] = useState<string[]>([]);
+
+  const fireExcludeSignal = (term: string) => {
+    if (!user) return;
+    writePoolSignal(user.uid, {
+      signalType: 'item_excluded',
+      materialId: combinedExtraction?.allTags?.bookTitle || null,
+      cefrLevel: combinedExtraction?.level || null,
+      activityType: null,
+      itemA: term,
     });
+  };
+
+  const excludeItem = (term: string) => {
+    setExcludedItems(prev => prev.includes(term) ? prev : [...prev, term]);
+    fireExcludeSignal(term);
+  };
+
+  const alwaysExcludeItem = (term: string) => {
+    setAlwaysExcludedItems(prev => prev.includes(term) ? prev : [...prev, term]);
+    setExcludedItems(prev => prev.includes(term) ? prev : [...prev, term]);
+    fireExcludeSignal(term);
+  };
+
+  const restoreItem = (term: string) => {
+    setExcludedItems(prev => prev.filter(i => i !== term));
+    setAlwaysExcludedItems(prev => prev.filter(i => i !== term));
+  };
+
+  const restoreAll = () => {
+    setExcludedItems([]);
+    setAlwaysExcludedItems([]);
   };
 
   const addToWorkbench = (item: WorkbenchItem) => {
@@ -144,6 +179,29 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (combinedExtraction?.grammar?.length) {
       setGrammarFocus(combinedExtraction.grammar[0]);
     }
+  }, [combinedExtraction]);
+
+  // Auto-populate poolItems from combinedExtraction, using teacher-selected level as default CEFR
+  useEffect(() => {
+    if (!combinedExtraction) { setPoolItems([]); return; }
+    const VALID_CEFR: CEFRLevel[] = ['Pre-A1', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+    const lvl: CEFRLevel = VALID_CEFR.includes(combinedExtraction.level as CEFRLevel)
+      ? (combinedExtraction.level as CEFRLevel)
+      : 'B1';
+    const items: PoolItem[] = [
+      ...(combinedExtraction.vocabulary || []).map(t => ({
+        term: t, type: 'vocabulary' as const, subtype: 'core' as const, cefrLevel: lvl, pos: '', usageCount: 0
+      })),
+      ...(combinedExtraction.secondaryVocabulary || []).map(t => ({
+        term: t, type: 'vocabulary' as const, subtype: 'secondary' as const, cefrLevel: lvl, pos: '', usageCount: 0
+      })),
+      ...(combinedExtraction.grammar || []).map(t => ({
+        term: t, type: 'grammar' as const, subtype: 'core' as const, cefrLevel: lvl, pos: '', usageCount: 0
+      })),
+    ];
+    setPoolItems(items);
+    // Reset session exclusions when a new material is loaded
+    setExcludedItems([]);
   }, [combinedExtraction]);
 
   const uploadNewPage = async (pageData: Partial<PageSource>) => {
@@ -225,7 +283,8 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } : undefined;
 
     try {
-      const result = await draftResponse(type, partnerInput, sources, workbench, user.uid, user.email, activityConfig, activityTypeMeta, excludedPoolItems, combinedExtraction?.level || undefined);
+      const allExcluded = Array.from(new Set([...excludedItems, ...alwaysExcludedItems]));
+      const result = await draftResponse(type, partnerInput, sources, workbench, user.uid, user.email, activityConfig, activityTypeMeta, allExcluded, combinedExtraction?.level || undefined);
       setDraftContent(result.content);
       setDraftNarration(result.narration);
       addMessage({ id: Date.now().toString(), role: 'partner', text: result.content, timestamp: Date.now() });
@@ -340,8 +399,13 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setGrammarFocus,
       wordBankEnabled,
       setWordBankEnabled,
-      excludedPoolItems,
-      togglePoolItemExclusion,
+      poolItems,
+      excludedItems,
+      alwaysExcludedItems,
+      excludeItem,
+      alwaysExcludeItem,
+      restoreItem,
+      restoreAll,
     }}>
       {children}
     </StudioContext.Provider>
