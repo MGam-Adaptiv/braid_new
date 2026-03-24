@@ -6,6 +6,7 @@ interface RequestBody {
   prompt: string;
   sourceContext: string;
   workbenchContext: string;
+  exerciseCount?: number;
 }
 
 const handler: Handler = async (event, context) => {
@@ -46,7 +47,7 @@ const handler: Handler = async (event, context) => {
       throw new Error('Missing request body');
     }
 
-    const { prompt, sourceContext, workbenchContext } = JSON.parse(event.body) as RequestBody;
+    const { prompt, sourceContext, workbenchContext, exerciseCount } = JSON.parse(event.body) as RequestBody;
 
     if (!prompt) {
       return {
@@ -135,7 +136,7 @@ CRITICAL: Every fill-blank question MUST contain a real, complete sentence with 
         },
         {
           role: 'user',
-          content: `Context:\n${sourceContext || 'No source context provided.'}\n\nWorkbench:\n${workbenchContext || 'No workbench context provided.'}\n\nUser Request: ${prompt}`,
+          content: `${exerciseCount ? `Generate exactly ${exerciseCount} exercises/questions. Do not generate more or fewer.\n\n` : ''}Context:\n${sourceContext || 'No source context provided.'}\n\nWorkbench:\n${workbenchContext || 'No workbench context provided.'}\n\nUser Request: ${prompt}`,
         },
       ],
       temperature: 0.7,
@@ -185,4 +186,3 @@ CRITICAL: Every fill-blank question MUST contain a real, complete sentence with 
 };
 
 export { handler };
-
