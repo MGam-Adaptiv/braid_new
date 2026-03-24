@@ -32,6 +32,7 @@ export const PartnerPanel: React.FC = () => {
     grammarFocus,
     combinedExtraction,
     wordBankEnabled,
+    activityConfig, setActivityConfig,
   } = useStudio();
 
   const [selectedTypeId, setSelectedTypeId] = useState<string>('gap_fill');
@@ -280,6 +281,20 @@ export const PartnerPanel: React.FC = () => {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Number of exercises input */}
+            <div className="flex items-center gap-2">
+              <p className="text-[8px] font-black uppercase tracking-widest text-gray-300 shrink-0">Number of exercises</p>
+              <input
+                type="number"
+                min={3}
+                max={20}
+                value={activityConfig.questionCount}
+                onChange={e => setActivityConfig({ ...activityConfig, questionCount: Math.min(20, Math.max(3, Number(e.target.value) || 8)) })}
+                disabled={isGenerating || isRefining}
+                className="w-14 px-2 py-1 rounded-lg border border-gray-200 bg-gray-50 text-[11px] font-bold text-gray-700 outline-none focus:border-coral disabled:opacity-40 text-center"
+              />
             </div>
 
             {/* Difficulty chips */}
