@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useStudio, CombinedContent } from '../../context/StudioContext';
+import { useStudio, CombinedContent, PoolItem, CEFRLevel } from '../../context/StudioContext';
 import { useAuth } from '../../context/AuthContext';
 import { readPage, ExtractionResult } from '../../services/mistralService';
 import { saveMaterial, getMaterials, recordMaterialUsage } from '../../services/firestoreService';
@@ -52,12 +52,21 @@ interface SourcePanelProps { layout?: 'vertical' | 'horizontal'; }
 export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' }) => {
   const { user, userProfile } = useAuth();
   const location = useLocation();
-  const { addSource, workflowStage, setWorkflowStage, setCombinedExtraction, combinedExtraction, excludedPoolItems, togglePoolItemExclusion } = useStudio();
+  const { addSource, workflowStage, setWorkflowStage, setCombinedExtraction, combinedExtraction, poolItems, excludedItems, alwaysExcludedItems, excludeItem, alwaysExcludeItem, restoreItem, restoreAll } = useStudio();
 
   const [pages, setPages] = useState<PageItem[]>([]);
   const [stage, setStage] = useState<PanelStage>('IDLE');
   const [dossierTab, setDossierTab] = useState<'sources' | 'pool'>('sources');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Pool Panel filter/collapse/context-menu state
+  const [poolSearch, setPoolSearch] = useState('');
+  const [poolCefrFilter, setPoolCefrFilter] = useState<string[]>([]);
+  const [poolTypeFilter, setPoolTypeFilter] = useState<'all' | 'vocabulary' | 'grammar'>('all');
+  const [coreVocabOpen, setCoreVocabOpen] = useState(true);
+  const [secVocabOpen, setSecVocabOpen] = useState(false);
+  const [grammarOpen, setGrammarOpen] = useState(true);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; term: string } | null>(null);
   
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -182,7 +191,7 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
   const finalizeAnalysis = async () => {
     // Only update local session state, do NOT auto-save to DB
     const finalPublisher = formPublisher === 'Other...' ? customPublisher : formPublisher;
-    const combinedData = { vocabulary: coreVocab, grammar: coreGrammar, topic: editedTopic, level: selectedLevel, ocrTexts: pages.map(p => p.analysis?.readingText?.content || ''), pageCount: pages.length, allTags: { publisher: finalPublisher, bookTitle: formBookTitle, unitTags: pages.flatMap(p => p.unitTags), labelTags: pages.flatMap(p => p.labelTags), pages: [] } };
+    const combinedData = { vocabulary: coreVocab, secondaryVocabulary: secondaryVocab, grammar: coreGrammar, topic: editedTopic, level: selectedLevel, ocrTexts: pages.map(p => p.analysis?.readingText?.content || ''), pageCount: pages.length, allTags: { publisher: finalPublisher, bookTitle: formBookTitle, unitTags: pages.flatMap(p => p.unitTags), labelTags: pages.flatMap(p => p.labelTags), pages: [] } };
     setCombinedExtraction(combinedData);
     addSource({ id: `c-${Date.now()}`, title: formBookTitle || 'Source', type: 'multi-page', content: JSON.stringify(combinedData), createdAt: Date.now() });
     setStage('READY'); setWorkflowStage('drafting');
@@ -205,15 +214,90 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
   const isHorizontal = layout === 'horizontal';
   
   if (workflowStage === 'drafting' || workflowStage === 'approved') {
-    const poolVocab = combinedExtraction?.vocabulary || coreVocab;
-    const poolGrammar = combinedExtraction?.grammar || coreGrammar;
-    const excludedCount = excludedPoolItems.length;
+    // ── Pool Panel helpers ──
+    const CEFR_LEVELS: CEFRLevel[] = ['Pre-A1', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+    const cefrBadgeClass = (level: string) => {
+      if (['Pre-A1', 'A1', 'A2'].includes(level)) return 'bg-green-100 text-green-700 border-green-200';
+      if (['B1', 'B2'].includes(level)) return 'bg-amber-100 text-amber-700 border-amber-200';
+      return 'bg-red-100 text-red-700 border-red-200';
+    };
+
+    const isExcluded = (term: string) => excludedItems.includes(term) || alwaysExcludedItems.includes(term);
+    const isAlwaysExcluded = (term: string) => alwaysExcludedItems.includes(term);
+
+    // Apply filters
+    const filteredItems = poolItems.filter(item => {
+      const matchesSearch = !poolSearch || item.term.toLowerCase().includes(poolSearch.toLowerCase());
+      const matchesCefr = poolCefrFilter.length === 0 || poolCefrFilter.includes(item.cefrLevel);
+      const matchesType = poolTypeFilter === 'all' || item.type === poolTypeFilter;
+      return matchesSearch && matchesCefr && matchesType;
+    });
+
+    const filteredCoreVocab  = filteredItems.filter(i => i.type === 'vocabulary' && i.subtype === 'core');
+    const filteredSecVocab   = filteredItems.filter(i => i.type === 'vocabulary' && i.subtype === 'secondary');
+    const filteredGrammar    = filteredItems.filter(i => i.type === 'grammar');
+
+    const totalExcluded = Array.from(new Set([...excludedItems, ...alwaysExcludedItems])).length;
+
+    // Pool chip component (inline)
+    const PoolChip = ({ item }: { item: PoolItem }) => {
+      const excl = isExcluded(item.term);
+      const always = isAlwaysExcluded(item.term);
+      return (
+        <div
+          key={item.term}
+          onContextMenu={e => { e.preventDefault(); if (!excl) setContextMenu({ x: e.clientX, y: e.clientY, term: item.term }); }}
+          className={`group inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-bold border transition-all select-none ${
+            excl
+              ? 'bg-gray-50 text-gray-300 border-gray-100'
+              : item.type === 'vocabulary'
+                ? 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 cursor-default'
+                : 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100 cursor-default'
+          }`}
+        >
+          <span className={excl ? 'line-through' : ''}>{item.term}</span>
+          <span className={`text-[6px] font-black px-1 py-0.5 rounded border ${cefrBadgeClass(item.cefrLevel)}`}>
+            {item.cefrLevel}
+          </span>
+          {always && !excl && (
+            <span className="text-[6px] font-black text-red-400 uppercase">∞</span>
+          )}
+          <button
+            onClick={() => excl ? restoreItem(item.term) : excludeItem(item.term)}
+            className={`ml-0.5 w-3.5 h-3.5 flex items-center justify-center rounded-full text-[9px] leading-none transition-all ${
+              excl
+                ? 'text-green-500 hover:text-green-700 hover:bg-green-50'
+                : 'text-gray-300 hover:text-red-400 hover:bg-red-50 opacity-0 group-hover:opacity-100'
+            }`}
+            title={excl ? 'Restore' : 'Exclude'}
+          >
+            {excl ? '↩' : '×'}
+          </button>
+        </div>
+      );
+    };
+
+    // Collapsible section header
+    const SectionHeader = ({ label, count, activeCount, open, onToggle }: { label: string; count: number; activeCount: number; open: boolean; onToggle: () => void }) => (
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between py-1 group"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-black uppercase tracking-widest text-gray-500 group-hover:text-gray-700 transition-colors">{label}</span>
+          <span className="text-[7px] font-black bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-full">{activeCount}/{count}</span>
+        </div>
+        <ChevronDown size={10} className={`text-gray-300 transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
+      </button>
+    );
 
     return (
-      <div className={`h-full flex ${isHorizontal ? 'flex-row items-center px-6 gap-8' : 'flex-col'} bg-white overflow-hidden border-r border-gray-100`}>
+      <div className={`h-full flex ${isHorizontal ? 'flex-row items-center px-6 gap-8' : 'flex-col'} bg-white overflow-hidden border-r border-gray-100`}
+        onClick={() => contextMenu && setContextMenu(null)}
+      >
         <div className="flex flex-col w-full h-full">
 
-          {/* DOSSIER HEADER */}
+          {/* PANEL HEADER */}
           <div className="px-5 pt-5 pb-3 border-b border-gray-100 shrink-0">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-black text-gray-900 uppercase text-xs tracking-widest flex items-center gap-2">
@@ -236,9 +320,9 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
                 className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 ${dossierTab === 'pool' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
               >
                 Pool
-                {excludedCount > 0 && (
+                {totalExcluded > 0 && (
                   <span className="bg-amber-400 text-white text-[7px] font-black rounded-full w-3.5 h-3.5 flex items-center justify-center">
-                    {excludedCount}
+                    {totalExcluded}
                   </span>
                 )}
               </button>
@@ -265,11 +349,11 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-center">
-                    <div className="text-xl font-black text-blue-600">{poolVocab.length}</div>
+                    <div className="text-xl font-black text-blue-600">{poolItems.filter(i => i.type === 'vocabulary').length}</div>
                     <div className="text-[8px] font-bold text-blue-400 uppercase tracking-widest">Vocab</div>
                   </div>
                   <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-center">
-                    <div className="text-xl font-black text-amber-600">{poolGrammar.length}</div>
+                    <div className="text-xl font-black text-amber-600">{poolItems.filter(i => i.type === 'grammar').length}</div>
                     <div className="text-[8px] font-bold text-amber-400 uppercase tracking-widest">Grammar</div>
                   </div>
                 </div>
@@ -296,79 +380,149 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
 
             {/* ── POOL TAB ── */}
             {dossierTab === 'pool' && (
-              <div className="space-y-5">
-                <p className="text-[9px] text-gray-400 leading-relaxed">
-                  Tap any item to exclude it from the next generation. Excluded items are skipped by the AI.
+              <div className="space-y-4">
+
+                {/* Header + total count */}
+                <div className="flex items-center justify-between">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
+                    <Sparkles size={10} className="text-coral" />
+                    Vocabulary &amp; Grammar Pool
+                    <span className="bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-full text-[7px] font-black">{poolItems.length}</span>
+                  </p>
+                  {totalExcluded > 0 && (
+                    <button
+                      onClick={restoreAll}
+                      className="text-[8px] font-black uppercase tracking-widest text-green-500 hover:text-green-700 transition-colors"
+                    >
+                      Restore all
+                    </button>
+                  )}
+                </div>
+
+                {/* Search */}
+                <div className="relative">
+                  <Search size={10} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" />
+                  <input
+                    value={poolSearch}
+                    onChange={e => setPoolSearch(e.target.value)}
+                    placeholder="Search pool..."
+                    className="w-full pl-7 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-[10px] font-bold outline-none focus:border-coral transition-colors placeholder-gray-300"
+                  />
+                </div>
+
+                {/* Type filter */}
+                <div className="flex bg-gray-100 rounded-xl p-0.5 gap-0.5">
+                  {(['all', 'vocabulary', 'grammar'] as const).map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setPoolTypeFilter(t)}
+                      className={`flex-1 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${poolTypeFilter === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                      {t === 'all' ? 'All' : t === 'vocabulary' ? 'Vocab' : 'Grammar'}
+                    </button>
+                  ))}
+                </div>
+
+                {/* CEFR multi-select filter */}
+                <div className="flex flex-wrap gap-1">
+                  {CEFR_LEVELS.map(level => {
+                    const active = poolCefrFilter.includes(level);
+                    return (
+                      <button
+                        key={level}
+                        onClick={() => setPoolCefrFilter(prev => active ? prev.filter(l => l !== level) : [...prev, level])}
+                        className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider transition-all border ${
+                          active ? cefrBadgeClass(level) : 'bg-gray-100 text-gray-300 border-transparent hover:bg-gray-200'
+                        }`}
+                      >
+                        {level}
+                      </button>
+                    );
+                  })}
+                  {poolCefrFilter.length > 0 && (
+                    <button onClick={() => setPoolCefrFilter([])} className="px-1.5 py-0.5 rounded text-[8px] font-black text-gray-300 hover:text-gray-500 transition-colors">
+                      ✕ clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Excluded items note */}
+                {totalExcluded > 0 && (
+                  <p className="text-[8px] text-amber-500 font-bold">
+                    {totalExcluded} item{totalExcluded !== 1 ? 's' : ''} excluded from next generation
+                    {alwaysExcludedItems.length > 0 && ` · ${alwaysExcludedItems.length} always excluded ∞`}
+                  </p>
+                )}
+
+                {/* ── Core Vocabulary ── */}
+                {(poolTypeFilter === 'all' || poolTypeFilter === 'vocabulary') && filteredCoreVocab.length > 0 && (
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden">
+                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
+                      <SectionHeader
+                        label="Core Vocabulary"
+                        count={filteredCoreVocab.length}
+                        activeCount={filteredCoreVocab.filter(i => !isExcluded(i.term)).length}
+                        open={coreVocabOpen}
+                        onToggle={() => setCoreVocabOpen(v => !v)}
+                      />
+                    </div>
+                    {coreVocabOpen && (
+                      <div className="px-3 py-3 flex flex-wrap gap-1.5">
+                        {filteredCoreVocab.map(item => <PoolChip key={item.term} item={item} />)}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Secondary Vocabulary ── */}
+                {(poolTypeFilter === 'all' || poolTypeFilter === 'vocabulary') && filteredSecVocab.length > 0 && (
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden">
+                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
+                      <SectionHeader
+                        label="Secondary Vocabulary"
+                        count={filteredSecVocab.length}
+                        activeCount={filteredSecVocab.filter(i => !isExcluded(i.term)).length}
+                        open={secVocabOpen}
+                        onToggle={() => setSecVocabOpen(v => !v)}
+                      />
+                    </div>
+                    {secVocabOpen && (
+                      <div className="px-3 py-3 flex flex-wrap gap-1.5">
+                        {filteredSecVocab.map(item => <PoolChip key={item.term} item={item} />)}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Grammar Structures ── */}
+                {(poolTypeFilter === 'all' || poolTypeFilter === 'grammar') && filteredGrammar.length > 0 && (
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden">
+                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
+                      <SectionHeader
+                        label="Grammar Structures"
+                        count={filteredGrammar.length}
+                        activeCount={filteredGrammar.filter(i => !isExcluded(i.term)).length}
+                        open={grammarOpen}
+                        onToggle={() => setGrammarOpen(v => !v)}
+                      />
+                    </div>
+                    {grammarOpen && (
+                      <div className="px-3 py-3 flex flex-wrap gap-1.5">
+                        {filteredGrammar.map(item => <PoolChip key={item.term} item={item} />)}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {filteredItems.length === 0 && (
+                  <p className="text-[10px] text-gray-300 text-center py-8 font-bold uppercase tracking-widest">
+                    {poolItems.length === 0 ? 'No pool items extracted' : 'No items match filters'}
+                  </p>
+                )}
+
+                <p className="text-[8px] text-gray-300 leading-relaxed pt-2">
+                  Hover a chip and click × to exclude. Right-click for options. Excluded items are skipped by the AI agent on the next generation only, unless marked ∞ (always exclude).
                 </p>
-
-                {/* Vocabulary */}
-                {poolVocab.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Vocabulary</p>
-                      <span className="text-[8px] font-bold text-gray-300">{poolVocab.length - poolVocab.filter(v => excludedPoolItems.includes(v)).length} active</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {poolVocab.map(item => {
-                        const excluded = excludedPoolItems.includes(item);
-                        return (
-                          <button
-                            key={item}
-                            onClick={() => togglePoolItemExclusion(item)}
-                            className={`px-2.5 py-1 rounded-full text-[9px] font-bold transition-all border ${
-                              excluded
-                                ? 'bg-gray-50 text-gray-300 border-gray-100 line-through'
-                                : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'
-                            }`}
-                          >
-                            {item}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Grammar */}
-                {poolGrammar.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Grammar</p>
-                      <span className="text-[8px] font-bold text-gray-300">{poolGrammar.length - poolGrammar.filter(g => excludedPoolItems.includes(g)).length} active</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {poolGrammar.map(item => {
-                        const excluded = excludedPoolItems.includes(item);
-                        return (
-                          <button
-                            key={item}
-                            onClick={() => togglePoolItemExclusion(item)}
-                            className={`px-2.5 py-1 rounded-full text-[9px] font-bold transition-all border ${
-                              excluded
-                                ? 'bg-gray-50 text-gray-300 border-gray-100 line-through'
-                                : 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100'
-                            }`}
-                          >
-                            {item}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {poolVocab.length === 0 && poolGrammar.length === 0 && (
-                  <p className="text-[10px] text-gray-300 text-center py-8 font-bold uppercase tracking-widest">No pool items extracted</p>
-                )}
-
-                {excludedCount > 0 && (
-                  <button
-                    onClick={() => excludedPoolItems.forEach(item => togglePoolItemExclusion(item))}
-                    className="w-full py-2 text-[9px] font-black uppercase tracking-widest text-amber-500 hover:text-amber-700 border border-amber-100 rounded-xl transition-colors"
-                  >
-                    Restore all ({excludedCount} excluded)
-                  </button>
-                )}
               </div>
             )}
           </div>
@@ -379,6 +533,28 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
             </div>
           </div>
         </div>
+
+        {/* Right-click context menu */}
+        {contextMenu && (
+          <div
+            className="fixed z-50 bg-white border border-gray-200 rounded-xl shadow-xl py-1 min-w-[160px]"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => { excludeItem(contextMenu.term); setContextMenu(null); }}
+              className="w-full text-left px-4 py-2 text-[10px] font-bold text-gray-700 hover:bg-gray-50 uppercase tracking-widest transition-colors"
+            >
+              Exclude for this activity
+            </button>
+            <button
+              onClick={() => { alwaysExcludeItem(contextMenu.term); setContextMenu(null); }}
+              className="w-full text-left px-4 py-2 text-[10px] font-bold text-red-500 hover:bg-red-50 uppercase tracking-widest transition-colors"
+            >
+              Always exclude ∞
+            </button>
+          </div>
+        )}
       </div>
     );
   }
