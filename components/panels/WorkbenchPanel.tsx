@@ -356,7 +356,7 @@ const AnswerKeySection = ({
 
 export const WorkbenchPanel: React.FC = () => {
   const { user } = useAuth();
-  const { workbench, updateWorkbench, setWorkbench, workflowStage, combinedExtraction, selectedDraftType } = useStudio();
+  const { workbench, updateWorkbench, setWorkbench, workflowStage, combinedExtraction, selectedDraftType, draftNarration } = useStudio();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -727,8 +727,48 @@ export const WorkbenchPanel: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* ROW 3: Generation Metadata (only when draftNarration exists) */}
+        {draftNarration && (
+          <div className="px-6 py-1.5 flex items-center gap-2 bg-emerald-50 border-t border-emerald-100">
+            <Sparkles size={11} className="text-emerald-500 shrink-0" />
+            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">
+              {draftNarration.activityType}
+            </span>
+            {draftNarration.cefrLevel && (
+              <>
+                <span className="text-emerald-300">·</span>
+                <span className="text-[10px] font-bold text-emerald-700">{draftNarration.cefrLevel}</span>
+              </>
+            )}
+            {Array.isArray(draftNarration.itemsSelected) && draftNarration.itemsSelected.length > 0 && (
+              <>
+                <span className="text-emerald-300">·</span>
+                <span className="text-[10px] font-bold text-emerald-700">
+                  {draftNarration.itemsSelected.length} items used
+                </span>
+              </>
+            )}
+            {Array.isArray(draftNarration.itemsSkipped) && draftNarration.itemsSkipped.length > 0 && (
+              <>
+                <span className="text-emerald-300">·</span>
+                <span className="text-[10px] font-bold text-emerald-600">
+                  {draftNarration.itemsSkipped.length} skipped
+                </span>
+              </>
+            )}
+            {Array.isArray(draftNarration.itemsSelected) && draftNarration.itemsSelected.length > 0 && (
+              <>
+                <span className="text-emerald-300">·</span>
+                <span className="text-[10px] font-bold text-emerald-600">
+                  ~{Math.max(5, draftNarration.itemsSelected.length)} min
+                </span>
+              </>
+            )}
+          </div>
+        )}
       </div>
-      
+
       {/* Magic link status banner */}
       {magicLinkInfo && (
         <div className="bg-blue-50 border-b border-blue-100 px-6 py-2.5 flex items-center gap-2.5 shrink-0">
