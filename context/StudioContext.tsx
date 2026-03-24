@@ -225,7 +225,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } : undefined;
 
     try {
-      const result = await draftResponse(type, partnerInput, sources, workbench, user.uid, user.email, activityConfig, activityTypeMeta, excludedPoolItems);
+      const result = await draftResponse(type, partnerInput, sources, workbench, user.uid, user.email, activityConfig, activityTypeMeta, excludedPoolItems, combinedExtraction?.level || undefined);
       setDraftContent(result.content);
       setDraftNarration(result.narration);
       addMessage({ id: Date.now().toString(), role: 'partner', text: result.content, timestamp: Date.now() });
