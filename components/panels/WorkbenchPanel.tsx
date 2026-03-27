@@ -11,7 +11,7 @@ import {
   Check, RefreshCw, Wand2, Key, Printer, Edit3,
   Bold, Italic, List, Maximize2, Minimize2, Save,
   Info, SplitSquareHorizontal, Sparkles, FileText, ChevronDown,
-  Clock, Bot, User, ChevronUp, Scissors, TrendingUp, Layers, Zap, Users, Globe, Link
+  Clock, History, X, Bot, User, ChevronUp, Scissors, TrendingUp, Layers, Zap, Users, Globe, Link
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -356,7 +356,7 @@ const AnswerKeySection = ({
 
 export const WorkbenchPanel: React.FC = () => {
   const { user } = useAuth();
-  const { workbench, updateWorkbench, setWorkbench, workflowStage, combinedExtraction, selectedDraftType, draftNarration } = useStudio();
+  const { workbench, updateWorkbench, setWorkbench, workflowStage, combinedExtraction, selectedDraftType, draftNarration, variants, restoreVariant } = useStudio();
   console.log('draftNarration:', draftNarration);
   const location = useLocation();
   const navigate = useNavigate();
@@ -372,6 +372,8 @@ export const WorkbenchPanel: React.FC = () => {
   const [pendingEnhancementType, setPendingEnhancementType] = useState<string | null>(null);
   const [showBuildLog, setShowBuildLog] = useState(false);
   const [magicLinkInfo, setMagicLinkInfo] = useState<{ responseCount: number; linkCount: number } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [restored, setRestored] = useState(false);
 
   // Load magic link info when an activity is loaded
   useEffect(() => {
@@ -717,6 +719,9 @@ export const WorkbenchPanel: React.FC = () => {
             <button onClick={() => setIsFullScreen(!isFullScreen)} className="p-2 text-gray-400 hover:text-coral transition-colors rounded-lg hover:bg-white" title={isFullScreen ? "Exit Fullscreen" : "Fullscreen"}>
               {isFullScreen ? <Minimize2 size={18}/> : <Maximize2 size={18}/>}
             </button>
+            <button onClick={() => setHistoryOpen(!historyOpen)} className={`p-2 transition-colors rounded-lg hover:bg-white ${historyOpen ? 'text-coral' : 'text-gray-400 hover:text-coral'}`} title="Session History">
+              <History size={18}/>
+            </button>
             <button onClick={handlePrint} className="p-2 text-gray-400 hover:text-coral transition-colors rounded-lg hover:bg-white" title="Print">
               <Printer size={18}/>
             </button>
@@ -768,6 +773,12 @@ export const WorkbenchPanel: React.FC = () => {
             )}
           </div>
         )}
+        {restored && (
+          <div className="px-6 py-1.5 flex items-center gap-2 bg-emerald-50 border-t border-emerald-100">
+            <Check size={11} className="text-emerald-500 shrink-0" />
+            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Variant restored</span>
+          </div>
+        )}
       </div>
 
       {/* Magic link status banner */}
@@ -779,6 +790,65 @@ export const WorkbenchPanel: React.FC = () => {
               ? `${magicLinkInfo.responseCount} student response${magicLinkInfo.responseCount !== 1 ? 's' : ''} received via magic link. Edits here don't affect their results — the link is frozen at creation.`
               : `This activity has an active magic link. Edits here won't affect what students see — the link is frozen at creation.`}
           </p>
+        </div>
+      )}
+
+      {/* History Drawer */}
+      {historyOpen && (
+        <div className="absolute right-0 top-0 h-full w-72 bg-white border-l border-gray-200 z-[80] flex flex-col shadow-xl">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <History size={14} className="text-gray-500" />
+              <span className="text-[11px] font-black text-gray-700 uppercase tracking-widest">Session History</span>
+              {variants.length > 0 && (
+                <span className="px-1.5 py-0.5 bg-coral/10 text-coral rounded text-[9px] font-black">{variants.length}</span>
+              )}
+            </div>
+            <button onClick={() => setHistoryOpen(false)} className="p-1 text-gray-400 hover:text-gray-600 rounded">
+              <X size={14} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {variants.length === 0 ? (
+              <div className="p-6 text-center">
+                <p className="text-[11px] font-bold text-gray-400 leading-relaxed">No variants yet — generate an activity to start tracking</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {variants.map(v => (
+                  <div key={v.id} className="px-4 py-3 hover:bg-gray-50/50 transition-colors">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-1.5 py-0.5 bg-coral/10 text-coral rounded text-[8px] font-black uppercase tracking-wider">
+                        {v.activityType || 'Activity'}
+                      </span>
+                      {v.cefrLevel && (
+                        <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[8px] font-black uppercase">
+                          {v.cefrLevel}
+                        </span>
+                      )}
+                      <span className="ml-auto text-[9px] font-bold text-gray-400">
+                        {v.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-[10px] font-medium text-gray-600 leading-relaxed mb-2">
+                      {v.instruction.length > 60 ? v.instruction.slice(0, 60) + '…' : v.instruction || '(no instruction)'}
+                    </p>
+                    <button
+                      onClick={() => {
+                        restoreVariant(v.id);
+                        setHistoryOpen(false);
+                        setRestored(true);
+                        setTimeout(() => setRestored(false), 2000);
+                      }}
+                      className="text-[9px] font-black text-coral uppercase tracking-widest hover:underline"
+                    >
+                      Restore
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
