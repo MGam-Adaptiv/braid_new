@@ -39,6 +39,16 @@ export interface PoolItem {
   usageCount: number;
 }
 
+export interface ActivityVariant {
+  id: string;
+  timestamp: Date;
+  activityType: string;
+  cefrLevel: string;
+  instruction: string;
+  content: string;
+  narration: any | null;
+}
+
 interface StudioContextType {
   workbench: WorkbenchItem[];
   setWorkbench: React.Dispatch<React.SetStateAction<WorkbenchItem[]>>;
@@ -92,6 +102,11 @@ interface StudioContextType {
   alwaysExcludeItem: (term: string) => void;
   restoreItem: (term: string) => void;
   restoreAll: () => void;
+
+  // Variant History
+  variants: ActivityVariant[];
+  addVariant: (variant: ActivityVariant) => void;
+  restoreVariant: (id: string) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -128,6 +143,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [excludedItems, setExcludedItems] = useState<string[]>([]);
   const [alwaysExcludedItems, setAlwaysExcludedItems] = useState<string[]>([]);
 
+  // Variant History
+  const [variants, setVariants] = useState<ActivityVariant[]>([]);
+
   const fireExcludeSignal = (term: string) => {
     if (!user) return;
     writePoolSignal(user.uid, {
@@ -158,6 +176,18 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const restoreAll = () => {
     setExcludedItems([]);
     setAlwaysExcludedItems([]);
+  };
+
+  const addVariant = (variant: ActivityVariant) => {
+    setVariants(prev => [variant, ...prev]);
+    console.log('VARIANTS:', variants.length + 1);
+  };
+
+  const restoreVariant = (id: string) => {
+    const v = variants.find(v => v.id === id);
+    if (!v) return;
+    setDraftContent(v.content);
+    setDraftNarration(v.narration);
   };
 
   const addToWorkbench = (item: WorkbenchItem) => {
@@ -200,8 +230,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       })),
     ];
     setPoolItems(items);
-    // Reset session exclusions when a new material is loaded
+    // Reset session exclusions and variant history when a new material is loaded
     setExcludedItems([]);
+    setVariants([]);
   }, [combinedExtraction]);
 
   const uploadNewPage = async (pageData: Partial<PageSource>) => {
@@ -355,6 +386,15 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       activityFormat: selectedType?.format || null,
     };
     addToWorkbench(enrichedItem);
+    addVariant({
+      id: Date.now().toString(),
+      timestamp: new Date(),
+      activityType: draftNarration?.activityType || selectedDraftType,
+      cefrLevel: combinedExtraction?.level || '',
+      instruction: lastDraftPrompt,
+      content: draftContent,
+      narration: draftNarration,
+    });
     toast.success("Activity added to Workbench!");
   };
 
@@ -406,6 +446,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       alwaysExcludeItem,
       restoreItem,
       restoreAll,
+      variants,
+      addVariant,
+      restoreVariant,
     }}>
       {children}
     </StudioContext.Provider>
