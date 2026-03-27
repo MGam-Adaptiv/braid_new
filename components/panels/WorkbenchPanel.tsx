@@ -357,7 +357,7 @@ const AnswerKeySection = ({
 export const WorkbenchPanel: React.FC = () => {
   const { user } = useAuth();
   const { workbench, updateWorkbench, setWorkbench, workflowStage, combinedExtraction, selectedDraftType, draftNarration, variants, restoreVariant } = useStudio();
-  console.log('draftNarration:', draftNarration);
+
   const location = useLocation();
   const navigate = useNavigate();
   
