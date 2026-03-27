@@ -292,7 +292,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCurrentDraftId(null);
     setDraftContent(null);
     setDraftNarration(null);
-    setLastDraftPrompt(type === 'Custom' ? partnerInput : type);
+    setLastDraftPrompt(partnerInput || type);
 
     // Resolve activity type template if one is selected
     const resolveTemplate = (template: string): string => {
