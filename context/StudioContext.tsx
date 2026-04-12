@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Workspace, ChatMessage, WorkbenchItem, SourceMaterial, PageSource, WorkflowStage } from '../types';
 import { useAuth } from './AuthContext';
-import { uploadPage, writePoolSignal } from '../services/firestoreService';
+import { uploadPage, writePoolSignal, getPoolPreferences, PoolPreferences } from '../services/firestoreService';
 import { draftResponse, refineDraft } from '../services/mistralService';
 import { ACTIVITY_TYPES } from '../constants/activityTypes';
 import toast from 'react-hot-toast';
@@ -313,9 +313,29 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       category: selectedType.category,
     } : undefined;
 
+    // Fetch cross-session preferences (non-blocking — null if first use or error)
+    const poolPrefs = await getPoolPreferences(user.uid).catch(() => null);
+    const buildCalibrationHint = (prefs: PoolPreferences | null, level: string | undefined): string => {
+      if (!prefs || !level) return '';
+      const cal = prefs.cefrCalibration[level];
+      if (!cal) return '';
+      const notes: string[] = [];
+      if (cal.acceptRate < 0.4) notes.push(`recent data shows this teacher finds ${level} activities too challenging — aim for a slightly more accessible register`);
+      if (cal.editDepthAvg > 0.5) notes.push(`this teacher tends to heavily edit ${level} activities — draft with simpler structure and cleaner sentence patterns`);
+      return notes.join('; ');
+    };
+    const poolPrefsHints = poolPrefs ? {
+      preferredActivityTypes: poolPrefs.preferredActivityTypes.length > 0 ? poolPrefs.preferredActivityTypes : undefined,
+      cefrCalibrationHint: buildCalibrationHint(poolPrefs, combinedExtraction?.level) || undefined,
+    } : undefined;
+
     try {
-      const allExcluded = Array.from(new Set([...excludedItems, ...alwaysExcludedItems]));
-      const result = await draftResponse(type, partnerInput, sources, workbench, user.uid, user.email, activityConfig, activityTypeMeta, allExcluded, combinedExtraction?.level || undefined);
+      const allExcluded = Array.from(new Set([
+        ...excludedItems,
+        ...alwaysExcludedItems,
+        ...(poolPrefs?.alwaysExcludedItems || []),
+      ]));
+      const result = await draftResponse(type, partnerInput, sources, workbench, user.uid, user.email, activityConfig, activityTypeMeta, allExcluded, combinedExtraction?.level || undefined, poolPrefsHints);
       setDraftContent(result.content);
       setDraftNarration(result.narration);
       addMessage({ id: Date.now().toString(), role: 'partner', text: result.content, timestamp: Date.now() });
