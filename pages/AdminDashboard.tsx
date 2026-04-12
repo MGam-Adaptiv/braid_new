@@ -8,17 +8,27 @@ import {
   Users, Activity, AlertTriangle, CheckCircle, RefreshCw,
   LayoutGrid, Shield, UserPlus, Infinity as InfinityIcon,
   BookOpen, FileText, Layers, Globe, ChevronDown,
-  TrendingUp, TrendingDown, Minus, Zap, Target, BarChart2, Wifi, X, Sparkles
+  TrendingUp, TrendingDown, Minus, Zap, Target, BarChart2, Wifi, X, Sparkles, Brain
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { trackTokenUsage } from '../services/tokenService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList, AreaChart, Area } from 'recharts';
 
+interface BookInsightDisplay {
+  bookTitle: string;
+  publisher: string;
+  teacherCount: number;
+  signalCount: number;
+  excludedItems: { item: string; count: number }[];
+  preferredActivityTypes: string[];
+  cefrCalibration: { [level: string]: { acceptRate: number; editDepthAvg: number; sampleSize: number } };
+}
+
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'intelligence' | 'governance' | 'approvals'>('intelligence');
+  const [activeTab, setActiveTab] = useState<'intelligence' | 'governance' | 'approvals' | 'pool'>('intelligence');
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [stats, setStats] = useState({ total: 0, active: 0, pending: 0, totalTokens: 0 });
   
@@ -69,6 +79,11 @@ export const AdminDashboard: React.FC = () => {
   const [actionPlanLogsLoading, setActionPlanLogsLoading] = useState(false);
   const [compareA, setCompareA] = useState<any>(null);
   const [compareB, setCompareB] = useState<any>(null);
+
+  // Pool Tab State
+  const [poolBooksData, setPoolBooksData]   = useState<BookInsightDisplay[]>([]);
+  const [poolLoading, setPoolLoading]       = useState(false);
+  const [poolStatsTotal, setPoolStatsTotal] = useState({ books: 0, signals: 0, teachers: 0 });
 
   // Clear action plan logs when publisher scope changes so stale entries don't show
   useEffect(() => {
@@ -182,6 +197,49 @@ export const AdminDashboard: React.FC = () => {
       };
       fetchIntelligence();
     }
+  }, [activeTab]);
+
+  // Pool Tab: fetch bookInsights from Firestore
+  useEffect(() => {
+    if (activeTab !== 'pool') return;
+    if (poolBooksData.length > 0) return; // skip re-fetch on tab revisit
+
+    const fetchPoolData = async () => {
+      setPoolLoading(true);
+      try {
+        const snap = await db.collection('bookInsights').get();
+        const books: BookInsightDisplay[] = snap.docs.map(doc => {
+          const d = doc.data();
+          return {
+            bookTitle:              d.bookTitle ?? '',
+            publisher:              d.publisher ?? 'Unknown',
+            teacherCount:           d.teacherCount ?? 0,
+            signalCount:            d.signalCount ?? 0,
+            excludedItems:          d.excludedItems ?? [],
+            preferredActivityTypes: d.preferredActivityTypes ?? [],
+            cefrCalibration:        d.cefrCalibration ?? {},
+          };
+        });
+        books.sort((a, b) => b.signalCount - a.signalCount);
+        setPoolBooksData(books);
+        setPoolStatsTotal({
+          books: books.length,
+          signals: books.reduce((s, b) => s + b.signalCount, 0),
+          teachers: books.reduce((s, b) => s + b.teacherCount, 0),
+        });
+        if (uniquePublishers.length === 0) {
+          const pubSet = new Set(books.map(b => b.publisher).filter(Boolean));
+          setUniquePublishers([...pubSet].sort());
+        }
+      } catch (err) {
+        console.error('[pool] fetch error:', err);
+        toast.error('Failed to load pool signal data');
+      } finally {
+        setPoolLoading(false);
+      }
+    };
+
+    fetchPoolData();
   }, [activeTab]);
 
   // Filter and Process Data Effect
@@ -826,6 +884,15 @@ export const AdminDashboard: React.FC = () => {
                 {stats.pending}
               </span>
             )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('pool')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              activeTab === 'pool' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            <Brain className="w-4 h-4" /> POOL
           </button>
         </div>
 
@@ -2676,6 +2743,164 @@ export const AdminDashboard: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* 4. POOL TAB — Cross-teacher book signal intelligence */}
+      {activeTab === 'pool' && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {poolLoading ? (
+            <div className="flex justify-center py-24">
+              <RefreshCw className="w-8 h-8 text-gray-300 animate-spin" />
+            </div>
+          ) : poolBooksData.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-16 text-center">
+              <Brain className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-gray-900 mb-2">No pool signal data yet</h3>
+              <p className="text-gray-500 text-sm">
+                Run the aggregation endpoint first:<br />
+                <code className="mt-2 inline-block bg-gray-50 border border-gray-200 rounded px-3 py-1 text-xs font-mono text-gray-700">
+                  POST /.netlify/functions/aggregate-book-insights-manual
+                </code>
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Summary strip */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { icon: <BookOpen className="w-6 h-6 text-indigo-600" />, label: 'BOOKS TRACKED', value: poolStatsTotal.books },
+                  { icon: <Activity className="w-6 h-6 text-emerald-600" />, label: 'TOTAL SIGNALS', value: poolStatsTotal.signals.toLocaleString() },
+                  { icon: <Users className="w-6 h-6 text-violet-600" />, label: 'CONTRIBUTING TEACHERS', value: poolStatsTotal.teachers },
+                ].map(({ icon, label, value }) => (
+                  <div key={label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center gap-4">
+                    <div className="p-3 bg-gray-50 rounded-xl">{icon}</div>
+                    <div>
+                      <div className="text-2xl font-black text-gray-900">{value}</div>
+                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Publisher filter + section header */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-3 flex-wrap">
+                <Brain className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-bold text-gray-900">Pool Signal Analytics</span>
+                <p className="text-xs text-gray-500 flex-1">Behavioural signals aggregated from teacher interactions — past 90 days</p>
+                <div className="relative">
+                  <select
+                    value={selectedPublisher}
+                    onChange={(e) => setSelectedPublisher(e.target.value)}
+                    className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-2 pl-4 pr-10 rounded-lg text-sm font-bold focus:outline-none cursor-pointer hover:bg-gray-100 transition-colors"
+                  >
+                    <option value="All Publishers">All Publishers</option>
+                    {uniquePublishers.map(pub => <option key={pub} value={pub}>{pub}</option>)}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Book cards */}
+              {(() => {
+                const filtered = selectedPublisher === 'All Publishers'
+                  ? poolBooksData
+                  : poolBooksData.filter(b => b.publisher === selectedPublisher);
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                      <p className="text-gray-400 text-sm font-medium">No pool signals for <strong>{selectedPublisher}</strong> yet.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-4">
+                    {filtered.map(book => {
+                      const cefrLevels = Object.entries(book.cefrCalibration);
+                      return (
+                        <div key={book.bookTitle} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all duration-300">
+                          <div className="flex items-start justify-between gap-4 mb-4">
+                            <div>
+                              <h4 className="text-base font-black text-gray-900 leading-tight">{book.bookTitle}</h4>
+                              <span className="inline-block mt-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                {book.publisher}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 text-right shrink-0">
+                              <div>
+                                <div className="text-xl font-black text-gray-900">{book.signalCount.toLocaleString()}</div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Signals</div>
+                              </div>
+                              <div>
+                                <div className="text-xl font-black text-gray-900">{book.teacherCount}</div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Teachers</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+                            {/* Top excluded items */}
+                            <div>
+                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Top excluded items</p>
+                              {book.excludedItems.length === 0 ? (
+                                <p className="text-xs text-gray-300 italic">None yet</p>
+                              ) : (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {book.excludedItems.slice(0, 5).map(({ item, count }) => (
+                                    <span key={item} className="px-2.5 py-1 bg-rose-50 text-rose-700 rounded-lg text-[10px] font-bold">
+                                      {item} <span className="text-rose-400 ml-1">{count}×</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Preferred activity types */}
+                            <div>
+                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Preferred activity types</p>
+                              {book.preferredActivityTypes.length === 0 ? (
+                                <p className="text-xs text-gray-300 italic">None yet</p>
+                              ) : (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {book.preferredActivityTypes.map(type => (
+                                    <span key={type} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-bold">
+                                      {type}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* CEFR calibration dots */}
+                            <div>
+                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">CEFR calibration</p>
+                              {cefrLevels.length === 0 ? (
+                                <p className="text-xs text-gray-300 italic">Insufficient data</p>
+                              ) : (
+                                <div className="flex flex-wrap gap-2">
+                                  {cefrLevels.map(([level, cal]) => {
+                                    const dotColor = cal.acceptRate >= 0.6 ? 'bg-emerald-400' : cal.acceptRate >= 0.4 ? 'bg-amber-400' : 'bg-rose-400';
+                                    return (
+                                      <div key={level} title={`Accept rate: ${(cal.acceptRate * 100).toFixed(0)}% | n=${cal.sampleSize}`} className="flex items-center gap-1.5">
+                                        <span className={`w-2.5 h-2.5 rounded-full ${dotColor} shrink-0`} />
+                                        <span className="text-[11px] font-black text-gray-600">{level}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </>
+          )}
         </div>
       )}
 
