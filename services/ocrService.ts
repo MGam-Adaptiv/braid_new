@@ -1,4 +1,5 @@
 import { trackTokenUsage } from './tokenService';
+import { auth } from '../lib/firebase';
 
 export interface OCRResult {
   fullText: string;
@@ -10,10 +11,12 @@ export interface OCRResult {
  */
 export const extractTextFromImage = async (base64Image: string, userId: string): Promise<OCRResult> => {
   try {
+    const token = await auth.currentUser?.getIdToken();
     const response = await fetch('/.netlify/functions/ai-ocr', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({
         base64Data: base64Image,
