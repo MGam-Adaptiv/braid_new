@@ -24,7 +24,6 @@ export const AccessPending: React.FC = () => {
     if (!user) return;
     setIsRepairing(true);
     try {
-      console.log("Attempting manual repair for:", user.email);
       // FIX: Use Compat Syntax
       const userRef = db.collection('users').doc(user.uid);
       const docSnap = await userRef.get();
