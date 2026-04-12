@@ -117,7 +117,8 @@ export const draftResponse = async (
   activityConfig?: { questionCount: number; questionFormat: string },
   activityTypeMeta?: { templateInstruction: string; typeId: string; typeName: string; format: string; category: string },
   excludedPoolItems?: string[],
-  cefrLevel?: string
+  cefrLevel?: string,
+  poolPrefsHints?: { preferredActivityTypes?: string[]; cefrCalibrationHint?: string }
 ): Promise<{ content: string; narration: any | null }> => {
   try {
     const sourceContext = sources.map((s, i) => {
@@ -161,7 +162,7 @@ Text Pool: ${(data.ocrTexts || []).join('\n\n')}`;
     const response = await fetch('/.netlify/functions/ai-draft', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, sourceContext, workbenchContext, exerciseCount: activityConfig?.questionCount, cefrLevel })
+      body: JSON.stringify({ prompt, sourceContext, workbenchContext, exerciseCount: activityConfig?.questionCount, cefrLevel, preferredActivityTypes: poolPrefsHints?.preferredActivityTypes, cefrCalibrationHint: poolPrefsHints?.cefrCalibrationHint })
     });
 
     if (!response.ok) throw new Error(`Drafting failed: ${response.status}`);
