@@ -9,6 +9,8 @@ interface RequestBody {
   exerciseCount?: number;
   cefrLevel?: string;
   excludedItems?: string[];
+  preferredActivityTypes?: string[];
+  cefrCalibrationHint?: string;
 }
 
 const handler: Handler = async (event, context) => {
@@ -49,7 +51,7 @@ const handler: Handler = async (event, context) => {
       throw new Error('Missing request body');
     }
 
-    const { prompt, sourceContext, workbenchContext, exerciseCount, cefrLevel, excludedItems } = JSON.parse(event.body) as RequestBody;
+    const { prompt, sourceContext, workbenchContext, exerciseCount, cefrLevel, excludedItems, preferredActivityTypes, cefrCalibrationHint } = JSON.parse(event.body) as RequestBody;
 
     if (!prompt) {
       return {
@@ -72,6 +74,12 @@ const handler: Handler = async (event, context) => {
     const client = new Mistral({ apiKey });
 
     console.log('EXCLUDED ITEMS:', JSON.stringify(excludedItems));
+    const prefHint = preferredActivityTypes?.length
+      ? `TEACHER PREFERENCE — SOFT HINT: This teacher most frequently uses [${preferredActivityTypes.join(', ')}] activities. If the request is open-ended and no type is specified, lean toward these. This is a suggestion — honour an explicit type request over this hint.\n\n`
+      : '';
+    const calibHint = cefrCalibrationHint
+      ? `CALIBRATION NOTE: ${cefrCalibrationHint}\n\n`
+      : '';
     const chatResponse = await client.chat.complete({
       model: 'mistral-small-latest',
       messages: [
@@ -141,7 +149,7 @@ ABSOLUTE RULE — ONE BLANK PER QUESTION: Every fill-blank question MUST contain
         },
         {
           role: 'user',
-          content: `${cefrLevel ? `Teacher-selected CEFR level: ${cefrLevel}. IMPORTANT — In the ---TEACHER NOTES--- section, always use exactly this level: ${cefrLevel}. Never infer a different level.\n\n` : ''}${exerciseCount ? `Generate exactly ${exerciseCount} exercises/questions. Do not generate more or fewer.\n\n` : ''}${excludedItems && excludedItems.length > 0 ? `NEVER use these vocabulary or grammar items anywhere in the activity — not in sentences, not in the word bank, not in examples: ${excludedItems.join(', ')}. This is a hard rule.\n\n` : ''}Context:\n${sourceContext || 'No source context provided.'}\n\nWorkbench:\n${workbenchContext || 'No workbench context provided.'}\n\nUser Request: ${prompt}`,
+          content: `${prefHint}${calibHint}${cefrLevel ? `Teacher-selected CEFR level: ${cefrLevel}. IMPORTANT — In the ---TEACHER NOTES--- section, always use exactly this level: ${cefrLevel}. Never infer a different level.\n\n` : ''}${exerciseCount ? `Generate exactly ${exerciseCount} exercises/questions. Do not generate more or fewer.\n\n` : ''}${excludedItems && excludedItems.length > 0 ? `NEVER use these vocabulary or grammar items anywhere in the activity — not in sentences, not in the word bank, not in examples: ${excludedItems.join(', ')}. This is a hard rule.\n\n` : ''}Context:\n${sourceContext || 'No source context provided.'}\n\nWorkbench:\n${workbenchContext || 'No workbench context provided.'}\n\nUser Request: ${prompt}`,
         },
       ],
       temperature: 0.7,
