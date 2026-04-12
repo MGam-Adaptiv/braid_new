@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Shield, RefreshCw, Ban, Star, Gift, CheckCircle, Trash2, Pencil, ScanLine, FileText, Zap, Repeat, BookOpen, Lightbulb } from 'lucide-react';
-import { db, increment } from '../../lib/firebase';
+import { db, increment, auth } from '../../lib/firebase';
 import toast from 'react-hot-toast';
 
 interface UserDetailPanelProps {
@@ -123,9 +123,10 @@ export default function UserDetailPanel({ user, onClose, onUpdate }: UserDetailP
   const deleteUser = async () => {
     setLoading(true);
     try {
+      const deleteToken = await auth.currentUser?.getIdToken();
       const res = await fetch('/.netlify/functions/admin-delete-user', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(deleteToken ? { 'Authorization': `Bearer ${deleteToken}` } : {}) },
         body: JSON.stringify({ uid: user.uid, action: 'delete' }),
       });
       if (!res.ok) {
@@ -428,3 +429,4 @@ export default function UserDetailPanel({ user, onClose, onUpdate }: UserDetailP
     </div>
   );
 }
+
