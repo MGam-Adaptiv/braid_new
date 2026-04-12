@@ -7,6 +7,8 @@ import { trackTokenUsage } from '../../services/tokenService';
 import { BuildLogEntry } from '../../types';
 
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+import { auth as firebaseAuth } from '../../lib/firebase';
 import {
   Check, RefreshCw, Wand2, Key, Printer, Edit3,
   Bold, Italic, List, Maximize2, Minimize2, Save,
@@ -300,12 +302,12 @@ const StudentContentSection = ({
           contentEditable={isEditing} 
           suppressContentEditableWarning 
           className={`prose prose-lg max-w-none text-gray-800 font-medium leading-normal focus:outline-none min-h-[200px] break-words overflow-wrap-break-word ${isEditing ? 'cursor-text' : ''} [&_p]:my-1 [&_br]:leading-tight`} 
-          dangerouslySetInnerHTML={{ 
-            __html: marked.parse(
+          dangerouslySetInnerHTML={{
+            __html: DOMPurify.sanitize(marked.parse(
               (parsed.studentContent || '')
                 .replace(/\n/g, '  \n')
                 .replace(/([A-D])\.\s+/g, '\n   $1. ')
-            ) 
+            ) as string)
           }}
         />
         
@@ -346,7 +348,7 @@ const AnswerKeySection = ({
         contentEditable={isEditing} 
         suppressContentEditableWarning 
         className={`prose prose-sm text-gray-600 leading-relaxed columns-2 outline-none min-h-[40px] ${isEditing ? 'cursor-text' : ''}`} 
-        dangerouslySetInnerHTML={{ __html: marked.parse(parsed.answerKey || '') }} 
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(parsed.answerKey || '') as string) }}
       />
     </div>
   );
@@ -448,9 +450,10 @@ export const WorkbenchPanel: React.FC = () => {
     setPendingEnhancementType(enhancementType);
     try {
       const item = activeItem as any;
+      const enhanceToken = await firebaseAuth.currentUser?.getIdToken();
       const response = await fetch('/.netlify/functions/ai-enhance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(enhanceToken ? { 'Authorization': `Bearer ${enhanceToken}` } : {}) },
         body: JSON.stringify({
           enhancementType,
           studentContent: parsed.studentContent,
@@ -956,7 +959,7 @@ export const WorkbenchPanel: React.FC = () => {
                   <span className="px-3 py-1 bg-red-100 text-red-600 rounded text-[9px] font-black uppercase tracking-widest border border-red-200">Original</span>
                 </div>
                 <div className="flex-1 overflow-y-auto p-8">
-                  <div className="prose prose-sm text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: marked.parse(pendingDiff.original) }} />
+                  <div className="prose prose-sm text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(pendingDiff.original) as string) }} />
                 </div>
               </div>
               {/* ENHANCED PANEL */}
@@ -965,7 +968,7 @@ export const WorkbenchPanel: React.FC = () => {
                   <span className="px-3 py-1 bg-green-100 text-green-600 rounded text-[9px] font-black uppercase tracking-widest border border-green-200">Enhanced</span>
                 </div>
                 <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-6">
-                  <div className="prose prose-sm text-gray-900 leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: marked.parse(pendingDiff.new) }} />
+                  <div className="prose prose-sm text-gray-900 leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(pendingDiff.new) as string) }} />
                   {pendingDiff.summary && (
                     <div className="p-5 bg-white rounded-xl border border-green-200 shadow-lg shrink-0">
                       <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2 flex items-center gap-2"><Sparkles size={12}/> AI Change Log</p>
