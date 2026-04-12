@@ -1,6 +1,7 @@
 import { Handler } from '@netlify/functions';
 import { Mistral } from '@mistralai/mistralai';
 import { checkRateLimit, getClientIp } from './utils/rateLimiter';
+import { admin } from './utils/firebaseAdmin';
 
 interface RequestBody {
   enhancementType: string;
@@ -49,8 +50,8 @@ const ENHANCEMENT_PROMPTS: Record<string, string> = {
 
 const handler: Handler = async (event) => {
   const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Origin': 'https://braid.studio',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
 
@@ -70,6 +71,18 @@ const handler: Handler = async (event) => {
       headers: { ...headers, ...rlHeaders },
       body: JSON.stringify({ error: 'Too many requests. Please wait a minute.' }),
     };
+  }
+
+  // Verify Firebase ID token
+  const authHeader = event.headers['authorization'];
+  const idToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!idToken) {
+    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
+  }
+  try {
+    await admin.auth().verifyIdToken(idToken);
+  } catch {
+    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) };
   }
 
   try {
