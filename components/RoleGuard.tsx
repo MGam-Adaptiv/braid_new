@@ -94,7 +94,6 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) 
   const hasPermission = userRole && allowedRoles.includes(userRole);
 
   if (!hasPermission) {
-    console.warn("DEBUG: RoleGuard BLOCKED access to", location.pathname, "- Actual Role:", userRole, "Required one of:", allowedRoles);
     return (
       <div className="h-screen flex flex-col items-center justify-center p-8 text-center bg-white">
         <div className="w-16 h-16 bg-coral/10 text-coral rounded-[24px] flex items-center justify-center mb-6 shadow-lg shadow-coral/5">
