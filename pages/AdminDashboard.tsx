@@ -385,7 +385,6 @@ export const AdminDashboard: React.FC = () => {
     // 3. Skills Focus (activityType -> category -> type)
     const skillsCounts: Record<string, number> = {};
     filteredActivities.forEach((a, index) => {
-      if (index === 0) console.log("Sample Activity Fields:", a); // Debug log
       const skill = a.activityTypeName || a.activityType || a.category || a.type;
       if (skill) skillsCounts[skill] = (skillsCounts[skill] || 0) + 1;
     });
@@ -763,9 +762,10 @@ export const AdminDashboard: React.FC = () => {
         adaptationSummary,
       };
 
+      const actionPlanToken = await firebase.auth().currentUser?.getIdToken();
       const res = await fetch('/.netlify/functions/ai-action-plan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(actionPlanToken ? { 'Authorization': `Bearer ${actionPlanToken}` } : {}) },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
