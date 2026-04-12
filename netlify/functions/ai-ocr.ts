@@ -1,6 +1,7 @@
 import { Handler } from '@netlify/functions';
 import { Mistral } from '@mistralai/mistralai';
 import { checkRateLimit, getClientIp } from './utils/rateLimiter';
+import { admin } from './utils/firebaseAdmin';
 
 interface RequestBody {
   base64Data: string;
@@ -9,8 +10,8 @@ interface RequestBody {
 
 const handler: Handler = async (event, context) => {
   const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Origin': 'https://braid.studio',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
 
@@ -38,6 +39,18 @@ const handler: Handler = async (event, context) => {
       headers: { ...headers, ...rlHeaders },
       body: JSON.stringify({ error: 'Too many requests. Please wait a minute.' }),
     };
+  }
+
+  // Verify Firebase ID token
+  const authHeader = event.headers['authorization'];
+  const idToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!idToken) {
+    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
+  }
+  try {
+    await admin.auth().verifyIdToken(idToken);
+  } catch {
+    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) };
   }
 
   try {
@@ -82,6 +95,7 @@ const handler: Handler = async (event, context) => {
               text: `Perform high-fidelity OCR on this educational material.
 Identify and extract all text content while preserving the logical structure.
 Categorize text segments into paragraphs, headings, lists, or tables.
+
 Return ONLY valid JSON:
 {
   "fullText": "string containing all extracted text",
@@ -110,10 +124,10 @@ Return ONLY valid JSON:
 
     let jsonResponse;
     try {
-      jsonResponse = JSON.parse(content as string);
+        jsonResponse = JSON.parse(content as string);
     } catch (e) {
-      console.error('Failed to parse JSON from Mistral response:', content);
-      throw new Error('Invalid JSON response from AI model');
+        console.error("Failed to parse JSON from Mistral response:", content);
+        throw new Error("Invalid JSON response from AI model");
     }
 
     const usage = chatResponse.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
@@ -121,7 +135,7 @@ Return ONLY valid JSON:
       promptTokens: usage.promptTokens,
       completionTokens: usage.completionTokens,
       totalTokens: usage.totalTokens || (usage.promptTokens + usage.completionTokens),
-      model: 'mistral-small-latest',
+      model: 'mistral-small-latest'
     };
 
     return {
@@ -136,18 +150,16 @@ Return ONLY valid JSON:
       statusCode: 500,
       headers,
       body: JSON.stringify({
-        error: 'OCR extraction failed',
-        details: error.message,
+        error: 'An internal error occurred. Please try again.',
         fallback: {
-          fullText: '',
-          blocks: [],
-          confidence: 0,
-          language: 'unknown',
-        },
+            fullText: "",
+            blocks: [],
+            confidence: 0,
+            language: "unknown"
+        }
       }),
     };
   }
 };
 
 export { handler };
-
