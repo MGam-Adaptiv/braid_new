@@ -180,7 +180,6 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const addVariant = (variant: ActivityVariant) => {
     setVariants(prev => [variant, ...prev]);
-    console.log('VARIANTS:', variants.length + 1);
   };
 
   const restoreVariant = (id: string) => {
