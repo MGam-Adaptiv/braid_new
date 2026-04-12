@@ -664,3 +664,44 @@ export const getTeacherLabels = async (teacherId: string): Promise<TeacherLabel[
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as TeacherLabel).sort((a, b) => a.name.localeCompare(b.name));
   }
 };
+
+// ── POOL PREFERENCES ─────────────────────────────────────────────────────────
+
+export interface SwapPattern {
+  from: string;
+  to: string;
+  count: number;
+}
+
+export interface CefrCalibrationEntry {
+  acceptRate: number;
+  editDepthAvg: number;
+}
+
+export interface PoolPreferences {
+  updatedAt: any; // Firestore Timestamp
+  signalCount: number;
+  excludedItems: string[];
+  alwaysExcludedItems: string[];
+  preferredActivityTypes: string[];
+  swapPatterns: SwapPattern[];
+  cefrCalibration: {
+    [cefrLevel: string]: CefrCalibrationEntry;
+  };
+}
+
+export const getPoolPreferences = async (uid: string): Promise<PoolPreferences | null> => {
+  try {
+    const docSnap = await db
+      .collection('users')
+      .doc(uid)
+      .collection('poolPreferences')
+      .doc('current')
+      .get();
+    if (!docSnap.exists) return null;
+    return docSnap.data() as PoolPreferences;
+  } catch (error: any) {
+    console.error('[getPoolPreferences] failed:', error);
+    return null;
+  }
+};
