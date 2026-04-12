@@ -98,8 +98,6 @@ export const createUserProfile = async (
     const userDoc = await userRef.get();
     
     if (!userDoc.exists) {
-      console.log(`userService: Creating new profile for ${email} with status: pending`);
-      
       const name = displayName || (email ? email.split('@')[0] : 'User');
 
       await userRef.set({
@@ -212,7 +210,6 @@ export const checkUsageLimit = async (userId: string, email?: string | null): Pr
       }
 
       if (lastResetDate.getTime() < currentCycleStart.getTime()) {
-        console.log(`🔄 Lazy Reset Triggered for ${email}. Resetting usage.`);
 
         transaction.update(userRef, {
           totalTokensUsed: 0,
