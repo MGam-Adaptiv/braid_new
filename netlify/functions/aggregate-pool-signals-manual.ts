@@ -2,7 +2,7 @@ import { Handler } from '@netlify/functions';
 import { runAggregation } from './utils/aggregationLogic';
 
 const headers = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'https://braid.studio',
   'Access-Control-Allow-Headers': 'Content-Type, x-admin-key',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
@@ -21,7 +21,7 @@ const handler: Handler = async (event) => {
     return { statusCode: 200, headers, body: JSON.stringify(result) };
   } catch (err: any) {
     console.error('[aggregate-manual] error:', err);
-    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'An internal error occurred. Please try again.' }) };
   }
 };
 
