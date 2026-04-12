@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useStudio } from '../../context/StudioContext';
 import { Shuffle, Check, Plus, ArrowUp, RefreshCw } from 'lucide-react';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 // ── Activity type chips (6 most common) ──────────────────────────────────────
 const ACTIVITY_CHIPS = [
@@ -110,7 +111,7 @@ export const PartnerPanel: React.FC = () => {
     }
 
     try {
-      return { __html: marked.parse(studentContent, { async: false }) as string };
+      return { __html: DOMPurify.sanitize(marked.parse(studentContent, { async: false }) as string) };
     } catch {
       return { __html: studentContent.replace(/\n/g, '<br/>') };
     }
@@ -347,3 +348,4 @@ export const PartnerPanel: React.FC = () => {
     </div>
   );
 };
+
