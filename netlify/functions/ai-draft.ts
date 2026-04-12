@@ -1,6 +1,7 @@
 import { Handler } from '@netlify/functions';
 import { Mistral } from '@mistralai/mistralai';
 import { checkRateLimit, getClientIp } from './utils/rateLimiter';
+import { admin } from './utils/firebaseAdmin';
 
 interface RequestBody {
   prompt: string;
@@ -15,8 +16,8 @@ interface RequestBody {
 
 const handler: Handler = async (event, context) => {
   const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Origin': 'https://braid.studio',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
 
@@ -46,6 +47,18 @@ const handler: Handler = async (event, context) => {
     };
   }
 
+  // Verify Firebase ID token
+  const authHeader = event.headers['authorization'];
+  const idToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!idToken) {
+    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
+  }
+  try {
+    await admin.auth().verifyIdToken(idToken);
+  } catch {
+    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) };
+  }
+
   try {
     if (!event.body) {
       throw new Error('Missing request body');
@@ -73,7 +86,6 @@ const handler: Handler = async (event, context) => {
 
     const client = new Mistral({ apiKey });
 
-    console.log('EXCLUDED ITEMS:', JSON.stringify(excludedItems));
     const prefHint = preferredActivityTypes?.length
       ? `TEACHER PREFERENCE — SOFT HINT: This teacher most frequently uses [${preferredActivityTypes.join(', ')}] activities. If the request is open-ended and no type is specified, lean toward these. This is a suggestion — honour an explicit type request over this hint.\n\n`
       : '';
