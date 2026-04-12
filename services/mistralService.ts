@@ -1,5 +1,11 @@
 import { SourceMaterial, WorkbenchItem, InteractiveData } from "../types";
 import { trackTokenUsage } from './tokenService';
+import { auth } from '../lib/firebase';
+
+const getAuthHeader = async (): Promise<Record<string, string>> => {
+  const token = await auth.currentUser?.getIdToken();
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
 
 export interface ExtractionResult {
   targetVocabulary?: { items: string[] };
@@ -74,6 +80,7 @@ export const readPage = async (blobUrl: string, userId: string): Promise<Extract
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...await getAuthHeader(),
       },
       body: JSON.stringify({
         base64Data,
@@ -161,7 +168,7 @@ Text Pool: ${(data.ocrTexts || []).join('\n\n')}`;
 
     const response = await fetch('/.netlify/functions/ai-draft', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...await getAuthHeader() },
       body: JSON.stringify({ prompt, sourceContext, workbenchContext, exerciseCount: activityConfig?.questionCount, cefrLevel, preferredActivityTypes: poolPrefsHints?.preferredActivityTypes, cefrCalibrationHint: poolPrefsHints?.cefrCalibrationHint })
     });
 
@@ -204,7 +211,7 @@ export const refineDraft = async (
   try {
     const response = await fetch('/.netlify/functions/ai-draft', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...await getAuthHeader() },
       body: JSON.stringify({
         prompt: `The teacher wants to REFINE this draft:\n\n${currentDraft}\n\nRefinement request: "${refinementRequest}"\n\nUpdate the draft accordingly. Keep the ---TITLE--- / ---TEACHER NOTES--- / ---STUDENT CONTENT--- / ---ANSWER KEY--- / ---END--- structure.`,
         sourceContext,
@@ -239,7 +246,7 @@ export const convertToInteractive = async (
   try {
     const response = await fetch('/.netlify/functions/ai-convert-interactive', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...await getAuthHeader() },
       body: JSON.stringify({ studentContent, answerKey, activityType, level })
     });
 
@@ -259,5 +266,4 @@ export const convertToInteractive = async (
     return null;
   }
 };
-
 
