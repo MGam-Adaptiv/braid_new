@@ -1,6 +1,7 @@
 import { Handler } from '@netlify/functions';
 import { Mistral } from '@mistralai/mistralai';
 import { checkRateLimit, getClientIp } from './utils/rateLimiter';
+import { admin } from './utils/firebaseAdmin';
 
 interface BookBrief {
   book: string;
@@ -52,9 +53,19 @@ const TIME_RANGE_LABEL: Record<string, string> = {
   all: 'all time',
 };
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': 'https://braid.studio',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 const handler: Handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers: corsHeaders, body: '' };
+  }
+
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return { statusCode: 405, headers: corsHeaders, body: 'Method Not Allowed' };
   }
 
   const ip = getClientIp(event.headers);
@@ -62,13 +73,26 @@ const handler: Handler = async (event) => {
   if (limited) {
     return {
       statusCode: 429,
+      headers: corsHeaders,
       body: JSON.stringify({ error: 'Too many requests. Please wait a minute.' }),
     };
   }
 
+  // Verify Firebase ID token
+  const authHeader = event.headers['authorization'];
+  const idToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!idToken) {
+    return { statusCode: 401, headers: corsHeaders, body: JSON.stringify({ error: 'Unauthorized' }) };
+  }
+  try {
+    await admin.auth().verifyIdToken(idToken);
+  } catch {
+    return { statusCode: 401, headers: corsHeaders, body: JSON.stringify({ error: 'Invalid token' }) };
+  }
+
   const apiKey = process.env.MISTRAL_API_KEY;
   if (!apiKey) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'Missing MISTRAL_API_KEY' }) };
+    return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: 'Missing MISTRAL_API_KEY' }) };
   }
 
   const body: ActionPlanRequest = JSON.parse(event.body || '{}');
@@ -160,14 +184,14 @@ Rules: one bookBrief per book in BOOKS TO INCLUDE. Plain prose only — no aster
       // Hard fallback: surface the raw text so the UI shows something
       return {
         statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({ error: 'Model returned unparseable response. Please regenerate.' })
       };
     }
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...parsed, tokensUsed })
     };
   } catch (err: any) {
@@ -176,9 +200,11 @@ Rules: one bookBrief per book in BOOKS TO INCLUDE. Plain prose only — no aster
     console.error('ai-action-plan error:', err);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: isTimeout ? 'Request timed out — try a narrower time range or fewer books.' : (err.message || 'Generation failed') })
+      headers: corsHeaders,
+      body: JSON.stringify({ error: isTimeout ? 'Request timed out — try a narrower time range or fewer books.' : 'An internal error occurred. Please try again.' })
     };
   }
 };
 
 export { handler };
+
