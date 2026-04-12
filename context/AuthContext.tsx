@@ -115,14 +115,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // MONITOR AUTH STATE
+  // MONITOR AUTH STATE + 2-HOUR INACTIVITY LOGOUT
   useEffect(() => {
     let unsubscribeUserDoc: (() => void) | null = null;
+    let inactivityTimer: ReturnType<typeof setTimeout>;
+
+    const resetInactivityTimer = () => {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        auth.signOut();
+      }, 2 * 60 * 60 * 1000); // 2 hours
+    };
+
+    const ACTIVITY_EVENTS = ['click', 'keydown', 'mousemove', 'touchstart'] as const;
 
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
       if (user) {
         setCurrentUser(user as User);
-        
+
+        // Attach inactivity logout
+        ACTIVITY_EVENTS.forEach(evt => window.addEventListener(evt, resetInactivityTimer));
+        resetInactivityTimer();
+
         // Start listening to the user profile
         unsubscribeUserDoc = db.collection('users').doc(user.uid).onSnapshot(
           (docSnap) => {
@@ -140,6 +154,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
       } else {
         // User is logged out
+        clearTimeout(inactivityTimer);
+        ACTIVITY_EVENTS.forEach(evt => window.removeEventListener(evt, resetInactivityTimer));
         setCurrentUser(null);
         setUserData(null);
         setLoading(false);
@@ -151,6 +167,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       unsubscribeAuth();
+      clearTimeout(inactivityTimer);
+      ACTIVITY_EVENTS.forEach(evt => window.removeEventListener(evt, resetInactivityTimer));
       if (unsubscribeUserDoc) unsubscribeUserDoc();
     };
   }, []);
