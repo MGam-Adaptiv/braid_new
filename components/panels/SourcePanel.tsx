@@ -52,7 +52,7 @@ interface SourcePanelProps { layout?: 'vertical' | 'horizontal'; }
 export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' }) => {
   const { user, userProfile } = useAuth();
   const location = useLocation();
-  const { addSource, workflowStage, setWorkflowStage, setCombinedExtraction, combinedExtraction, poolItems, excludedItems, alwaysExcludedItems, excludeItem, alwaysExcludeItem, restoreItem, restoreAll } = useStudio();
+  const { addSource, workflowStage, setWorkflowStage, setCombinedExtraction, combinedExtraction, poolItems, excludedItems, alwaysExcludedItems, excludeItem, alwaysExcludeItem, restoreItem, restoreAll, addPoolItem } = useStudio();
 
   const [pages, setPages] = useState<PageItem[]>([]);
   const [stage, setStage] = useState<PanelStage>('IDLE');
@@ -67,6 +67,8 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
   const [secVocabOpen, setSecVocabOpen] = useState(false);
   const [grammarOpen, setGrammarOpen] = useState(true);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; term: string } | null>(null);
+  const [addItemText, setAddItemText] = useState('');
+  const [addItemType, setAddItemType] = useState<'vocabulary' | 'grammar'>('vocabulary');
   
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -264,12 +266,12 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
           )}
           <button
             onClick={() => excl ? restoreItem(item.term) : excludeItem(item.term)}
-            className={`ml-0.5 w-3.5 h-3.5 flex items-center justify-center rounded-full text-[9px] leading-none transition-all ${
+            className={`ml-0.5 w-4 h-4 flex items-center justify-center rounded-full text-[10px] leading-none transition-all ${
               excl
                 ? 'text-green-500 hover:text-green-700 hover:bg-green-50'
-                : 'text-gray-300 hover:text-red-400 hover:bg-red-50 opacity-0 group-hover:opacity-100'
+                : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
             }`}
-            title={excl ? 'Restore' : 'Exclude'}
+            title={excl ? 'Restore' : 'Remove'}
           >
             {excl ? '↩' : '×'}
           </button>
@@ -397,6 +399,37 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
                       Restore all
                     </button>
                   )}
+                </div>
+
+                {/* Add item */}
+                <div className="flex gap-1.5">
+                  <input
+                    value={addItemText}
+                    onChange={e => setAddItemText(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && addItemText.trim()) {
+                        addPoolItem(addItemText, addItemType);
+                        setAddItemText('');
+                      }
+                    }}
+                    placeholder="Add word or grammar..."
+                    className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-[10px] font-bold outline-none focus:border-coral transition-colors placeholder-gray-300"
+                  />
+                  <select
+                    value={addItemType}
+                    onChange={e => setAddItemType(e.target.value as 'vocabulary' | 'grammar')}
+                    className="px-2 py-2 bg-gray-50 border border-gray-200 rounded-xl text-[9px] font-black uppercase outline-none focus:border-coral text-gray-500"
+                  >
+                    <option value="vocabulary">Vocab</option>
+                    <option value="grammar">Grammar</option>
+                  </select>
+                  <button
+                    onClick={() => { if (addItemText.trim()) { addPoolItem(addItemText, addItemType); setAddItemText(''); } }}
+                    disabled={!addItemText.trim()}
+                    className="px-3 py-2 bg-coral text-white rounded-xl text-[10px] font-black disabled:opacity-30 hover:bg-[#DC2E4A] transition-colors"
+                  >
+                    +
+                  </button>
                 </div>
 
                 {/* Search */}
