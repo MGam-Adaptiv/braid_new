@@ -67,9 +67,11 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
   const [secVocabOpen, setSecVocabOpen] = useState(false);
   const [grammarOpen, setGrammarOpen] = useState(true);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; term: string; subtype: string } | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [addItemText, setAddItemText] = useState('');
   const [addItemType, setAddItemType] = useState<'vocabulary' | 'grammar'>('vocabulary');
   const [addItemCefr, setAddItemCefr] = useState<string>('');
+  const addItemInputRef = useRef<HTMLInputElement>(null);
   
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -392,59 +394,76 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
                     Vocabulary &amp; Grammar Pool
                     <span className="bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-full text-[7px] font-black">{poolItems.length}</span>
                   </p>
-                  {totalExcluded > 0 && (
+                  <div className="flex items-center gap-2">
+                    {totalExcluded > 0 && (
+                      <button
+                        onClick={restoreAll}
+                        className="text-[8px] font-black uppercase tracking-widest text-green-500 hover:text-green-700 transition-colors"
+                      >
+                        Restore all
+                      </button>
+                    )}
                     <button
-                      onClick={restoreAll}
-                      className="text-[8px] font-black uppercase tracking-widest text-green-500 hover:text-green-700 transition-colors"
-                    >
-                      Restore all
-                    </button>
-                  )}
-                </div>
-
-                {/* Add item */}
-                <div className="space-y-1.5">
-                  <div className="flex gap-1.5">
-                    <input
-                      value={addItemText}
-                      onChange={e => setAddItemText(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' && addItemText.trim()) {
-                          addPoolItem(addItemText, addItemType, (addItemCefr || combinedExtraction?.level || 'A1') as any);
-                          setAddItemText('');
-                        }
+                      onClick={() => {
+                        setShowAddForm(v => !v);
+                        setTimeout(() => addItemInputRef.current?.focus(), 50);
                       }}
-                      placeholder="Add word or grammar point..."
-                      className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-[10px] font-bold outline-none focus:border-coral transition-colors placeholder-gray-300"
-                    />
-                    <button
-                      onClick={() => { if (addItemText.trim()) { addPoolItem(addItemText, addItemType, (addItemCefr || combinedExtraction?.level || 'A1') as any); setAddItemText(''); } }}
-                      disabled={!addItemText.trim()}
-                      className="px-3 py-2 bg-coral text-white rounded-xl text-[10px] font-black disabled:opacity-30 hover:bg-[#DC2E4A] transition-colors"
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[14px] font-black transition-all ${
+                        showAddForm ? 'bg-gray-200 text-gray-500 rotate-45' : 'bg-coral text-white shadow-sm shadow-coral/30 hover:bg-[#DC2E4A]'
+                      }`}
                     >
                       +
                     </button>
                   </div>
-                  <div className="flex gap-1.5">
-                    <select
-                      value={addItemType}
-                      onChange={e => setAddItemType(e.target.value as 'vocabulary' | 'grammar')}
-                      className="flex-1 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[9px] font-black uppercase outline-none focus:border-coral text-gray-500"
-                    >
-                      <option value="vocabulary">Vocabulary</option>
-                      <option value="grammar">Grammar</option>
-                    </select>
-                    <select
-                      value={addItemCefr || combinedExtraction?.level || 'A1'}
-                      onChange={e => setAddItemCefr(e.target.value)}
-                      className="flex-1 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[9px] font-black uppercase outline-none focus:border-coral text-gray-500"
-                    >
-                      {['Pre-A1','A1','A2','B1','B2','C1','C2'].map(l => (
-                        <option key={l} value={l}>{l}</option>
-                      ))}
-                    </select>
-                  </div>
                 </div>
+
+                {/* Add item form — shown only when + is clicked */}
+                {showAddForm && (
+                  <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="flex gap-1.5">
+                      <input
+                        ref={addItemInputRef}
+                        value={addItemText}
+                        onChange={e => setAddItemText(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && addItemText.trim()) {
+                            addPoolItem(addItemText, addItemType, (addItemCefr || combinedExtraction?.level || 'A1') as any);
+                            setAddItemText('');
+                          }
+                          if (e.key === 'Escape') { setShowAddForm(false); setAddItemText(''); }
+                        }}
+                        placeholder="Word or grammar point..."
+                        className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-[10px] font-bold outline-none focus:border-coral transition-colors placeholder-gray-300"
+                      />
+                      <button
+                        onClick={() => { if (addItemText.trim()) { addPoolItem(addItemText, addItemType, (addItemCefr || combinedExtraction?.level || 'A1') as any); setAddItemText(''); } }}
+                        disabled={!addItemText.trim()}
+                        className="px-3 py-2 bg-coral text-white rounded-xl text-[10px] font-black disabled:opacity-30 hover:bg-[#DC2E4A] transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <select
+                        value={addItemType}
+                        onChange={e => setAddItemType(e.target.value as 'vocabulary' | 'grammar')}
+                        className="flex-1 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[9px] font-black uppercase outline-none focus:border-coral text-gray-500"
+                      >
+                        <option value="vocabulary">Vocabulary</option>
+                        <option value="grammar">Grammar</option>
+                      </select>
+                      <select
+                        value={addItemCefr || combinedExtraction?.level || 'A1'}
+                        onChange={e => setAddItemCefr(e.target.value)}
+                        className="flex-1 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[9px] font-black uppercase outline-none focus:border-coral text-gray-500"
+                      >
+                        {['Pre-A1','A1','A2','B1','B2','C1','C2'].map(l => (
+                          <option key={l} value={l}>{l}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
 
                 {/* Search */}
                 <div className="relative">
