@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStudio } from '../../context/StudioContext';
-import { Shuffle, Check, Plus, ArrowUp, RefreshCw, Zap, GitBranch } from 'lucide-react';
+import { Shuffle, Check, Plus, ArrowUp, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
@@ -14,10 +14,6 @@ const ACTIVITY_CHIPS = [
   { id: 'speaking_cards',          label: 'Speaking Cards'    },
 ];
 
-// 4 quick chips shown in Create mode
-const CREATE_CHIPS = ACTIVITY_CHIPS.filter(c =>
-  ['gap_fill', 'error_correction', 'true_false_ng', 'speaking_cards'].includes(c.id)
-);
 
 const DIFFICULTY_CHIPS = [
   { id: 'easier',   label: 'Easier'   },
@@ -41,7 +37,7 @@ export const PartnerPanel: React.FC = () => {
     activityConfig, setActivityConfig,
   } = useStudio();
 
-  const [mode, setMode]                     = useState<'create' | 'braid'>('create');
+  const [showOptions, setShowOptions]       = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<string>('gap_fill');
   const [difficulty, setDifficulty]         = useState<string>('at_level');
   const [isExpanded, setIsExpanded]         = useState(false);
@@ -144,33 +140,11 @@ export const PartnerPanel: React.FC = () => {
               Draft Partner
             </h2>
           </div>
-          <div className="flex items-center gap-2">
-            {hasMaterial && (
-              <div className="flex bg-gray-100 rounded-full p-0.5 gap-0.5">
-                <button
-                  onClick={() => setMode('create')}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest transition-all ${
-                    mode === 'create' ? 'bg-white shadow text-gray-900' : 'text-gray-400 hover:text-gray-600'
-                  }`}
-                >
-                  <Zap size={9} strokeWidth={3} /> Create
-                </button>
-                <button
-                  onClick={() => setMode('braid')}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest transition-all ${
-                    mode === 'braid' ? 'bg-white shadow text-gray-900' : 'text-gray-400 hover:text-gray-600'
-                  }`}
-                >
-                  <GitBranch size={9} strokeWidth={3} /> Braid
-                </button>
-              </div>
-            )}
-            <div className={`w-1.5 h-1.5 rounded-full ${
-              hasMaterial
-                ? isGenerating || isRefining ? 'bg-coral animate-pulse' : 'bg-green-400'
-                : 'bg-gray-300'
-            }`} />
-          </div>
+          <div className={`w-1.5 h-1.5 rounded-full ${
+            hasMaterial
+              ? isGenerating || isRefining ? 'bg-coral animate-pulse' : 'bg-green-400'
+              : 'bg-gray-300'
+          }`} />
         </div>
       </div>
 
@@ -296,10 +270,10 @@ export const PartnerPanel: React.FC = () => {
       {/* ── FOOTER ──────────────────────────────────────────────────────── */}
       <div className="px-4 pb-5 pt-3 border-t border-gray-100 shrink-0 bg-white space-y-3">
 
-        {/* CREATE MODE — 4 quick chips */}
-        {hasMaterial && mode === 'create' && (
+        {/* All 6 activity type chips — always visible */}
+        {hasMaterial && (
           <div className="flex flex-wrap gap-1.5">
-            {CREATE_CHIPS.map(chip => (
+            {ACTIVITY_CHIPS.map(chip => (
               <button
                 key={chip.id}
                 onClick={() => handleTypeChipClick(chip.id)}
@@ -316,98 +290,78 @@ export const PartnerPanel: React.FC = () => {
           </div>
         )}
 
-        {/* BRAID MODE — full config */}
-        {hasMaterial && mode === 'braid' && (
-          <div className="max-h-[300px] overflow-y-auto no-scrollbar space-y-3">
+        {/* More options expander */}
+        {hasMaterial && (
+          <>
+            <button
+              onClick={() => setShowOptions(v => !v)}
+              className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-gray-300 hover:text-gray-500 transition-colors"
+            >
+              {showOptions ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+              {showOptions ? 'Fewer options' : 'More options'}
+            </button>
 
-            {/* Activity type — all 6 */}
-            <div>
-              <p className="text-[8px] font-black uppercase tracking-widest text-gray-300 mb-1.5">Activity Type</p>
-              <div className="grid grid-cols-2 gap-1.5">
-                {ACTIVITY_CHIPS.map(chip => (
-                  <button
-                    key={chip.id}
-                    onClick={() => handleTypeChipClick(chip.id)}
-                    disabled={isGenerating || isRefining}
-                    className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border disabled:opacity-40 disabled:cursor-not-allowed text-left ${
-                      selectedTypeId === chip.id
-                        ? 'bg-coral/10 text-coral border-coral/30'
-                        : 'bg-gray-100 text-gray-500 border-transparent hover:bg-gray-200'
-                    }`}
-                  >
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {showOptions && (
+              <div className="space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
 
-            {/* Difficulty */}
-            <div className="flex items-center gap-2">
-              <p className="text-[8px] font-black uppercase tracking-widest text-gray-300 shrink-0">Difficulty</p>
-              <div className="flex gap-1.5">
-                {DIFFICULTY_CHIPS.map(d => (
+                {/* Difficulty */}
+                <div className="flex items-center gap-2">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-gray-300 shrink-0">Difficulty</p>
+                  <div className="flex gap-1.5">
+                    {DIFFICULTY_CHIPS.map(d => (
+                      <button
+                        key={d.id}
+                        onClick={() => setDifficulty(d.id)}
+                        disabled={isGenerating || isRefining}
+                        className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-wider transition-all border disabled:opacity-40 disabled:cursor-not-allowed ${
+                          difficulty === d.id
+                            ? 'bg-gray-900 text-white border-gray-900'
+                            : 'bg-gray-100 text-gray-400 border-transparent hover:bg-gray-200'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Exercises + Word bank */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[8px] font-black uppercase tracking-widest text-gray-300 shrink-0">Exercises</p>
+                    <input
+                      type="number"
+                      min={3}
+                      max={20}
+                      value={activityConfig.questionCount}
+                      onChange={e => setActivityConfig({ ...activityConfig, questionCount: Math.min(20, Math.max(3, Number(e.target.value) || 8)) })}
+                      disabled={isGenerating || isRefining}
+                      className="w-14 px-2 py-1 rounded-lg border border-gray-200 bg-gray-50 text-[11px] font-bold text-gray-700 outline-none focus:border-coral disabled:opacity-40 text-center"
+                    />
+                  </div>
                   <button
-                    key={d.id}
-                    onClick={() => setDifficulty(d.id)}
+                    onClick={() => setWordBankEnabled(!wordBankEnabled)}
                     disabled={isGenerating || isRefining}
-                    className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-wider transition-all border disabled:opacity-40 disabled:cursor-not-allowed ${
-                      difficulty === d.id
-                        ? 'bg-gray-900 text-white border-gray-900'
+                    className={`px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border transition-all disabled:opacity-40 ${
+                      wordBankEnabled
+                        ? 'bg-coral/10 text-coral border-coral/20'
                         : 'bg-gray-100 text-gray-400 border-transparent hover:bg-gray-200'
                     }`}
                   >
-                    {d.label}
+                    {wordBankEnabled ? '☑ Word Bank' : 'Word Bank'}
                   </button>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            {/* Number of exercises + Word bank */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <p className="text-[8px] font-black uppercase tracking-widest text-gray-300 shrink-0">Exercises</p>
-                <input
-                  type="number"
-                  min={3}
-                  max={20}
-                  value={activityConfig.questionCount}
-                  onChange={e => setActivityConfig({ ...activityConfig, questionCount: Math.min(20, Math.max(3, Number(e.target.value) || 8)) })}
-                  disabled={isGenerating || isRefining}
-                  className="w-14 px-2 py-1 rounded-lg border border-gray-200 bg-gray-50 text-[11px] font-bold text-gray-700 outline-none focus:border-coral disabled:opacity-40 text-center"
-                />
-              </div>
-              <button
-                onClick={() => setWordBankEnabled(!wordBankEnabled)}
-                disabled={isGenerating || isRefining}
-                className={`px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border transition-all disabled:opacity-40 ${
-                  wordBankEnabled
-                    ? 'bg-coral/10 text-coral border-coral/20'
-                    : 'bg-gray-100 text-gray-400 border-transparent hover:bg-gray-200'
-                }`}
-              >
-                {wordBankEnabled ? '☑ Word Bank' : 'Word Bank'}
-              </button>
-            </div>
-
-            {/* Plan preview */}
-            {planPreview && (
-              <div className="bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-100">
-                <p className="text-[8px] font-black uppercase tracking-widest text-gray-300 mb-1">Plan Preview</p>
-                <p className="text-[10px] text-gray-500 italic leading-relaxed">{planPreview}</p>
+                {/* Plan preview */}
+                {planPreview && (
+                  <div className="bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-100">
+                    <p className="text-[8px] font-black uppercase tracking-widest text-gray-300 mb-1">Plan Preview</p>
+                    <p className="text-[10px] text-gray-500 italic leading-relaxed">{planPreview}</p>
+                  </div>
+                )}
               </div>
             )}
-
-            {/* Create Activity button */}
-            <button
-              onClick={handleSend}
-              disabled={isGenerating || isRefining || !hasMaterial}
-              className="w-full py-3.5 bg-coral text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#DC2E4A] transition-all shadow-lg shadow-coral/20 flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-30"
-            >
-              {isGenerating || isRefining
-                ? <><RefreshCw size={14} className="animate-spin" /> Generating…</>
-                : <><GitBranch size={14} strokeWidth={2.5} /> Create Activity</>}
-            </button>
-          </div>
+          </>
         )}
 
         {/* Text input + send */}
