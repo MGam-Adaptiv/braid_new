@@ -102,7 +102,8 @@ interface StudioContextType {
   alwaysExcludeItem: (term: string) => void;
   restoreItem: (term: string) => void;
   restoreAll: () => void;
-  addPoolItem: (term: string, type: 'vocabulary' | 'grammar') => void;
+  addPoolItem: (term: string, type: 'vocabulary' | 'grammar', cefr?: CEFRLevel) => void;
+  moveToCore: (term: string) => void;
 
   // Variant History
   variants: ActivityVariant[];
@@ -179,11 +180,23 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setAlwaysExcludedItems([]);
   };
 
-  const addPoolItem = (term: string, type: 'vocabulary' | 'grammar') => {
+  const addPoolItem = (term: string, type: 'vocabulary' | 'grammar', cefr?: CEFRLevel) => {
     const trimmed = term.trim();
-    if (!trimmed || poolItems.some(i => i.term.toLowerCase() === trimmed.toLowerCase())) return;
-    const lvl = (combinedExtraction?.level as CEFRLevel) || 'A1';
+    if (!trimmed) return;
+    const existing = poolItems.find(i => i.term.toLowerCase() === trimmed.toLowerCase());
+    if (existing) {
+      // If excluded, restore it instead of blocking
+      if (excludedItems.includes(existing.term) || alwaysExcludedItems.includes(existing.term)) {
+        restoreItem(existing.term);
+      }
+      return;
+    }
+    const lvl = cefr || (combinedExtraction?.level as CEFRLevel) || 'A1';
     setPoolItems(prev => [...prev, { term: trimmed, type, subtype: 'core', cefrLevel: lvl, pos: '', usageCount: 0 }]);
+  };
+
+  const moveToCore = (term: string) => {
+    setPoolItems(prev => prev.map(i => i.term === term ? { ...i, subtype: 'core' } : i));
   };
 
   const addVariant = (variant: ActivityVariant) => {
@@ -474,6 +487,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       restoreItem,
       restoreAll,
       addPoolItem,
+      moveToCore,
       variants,
       addVariant,
       restoreVariant,
