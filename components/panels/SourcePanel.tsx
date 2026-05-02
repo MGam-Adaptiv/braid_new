@@ -52,7 +52,7 @@ interface SourcePanelProps { layout?: 'vertical' | 'horizontal'; }
 export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' }) => {
   const { user, userProfile } = useAuth();
   const location = useLocation();
-  const { addSource, workflowStage, setWorkflowStage, setCombinedExtraction, combinedExtraction, poolItems, excludedItems, alwaysExcludedItems, excludeItem, alwaysExcludeItem, restoreItem, restoreAll, addPoolItem } = useStudio();
+  const { addSource, workflowStage, setWorkflowStage, setCombinedExtraction, combinedExtraction, poolItems, excludedItems, alwaysExcludedItems, excludeItem, alwaysExcludeItem, restoreItem, restoreAll, addPoolItem, moveToCore } = useStudio();
 
   const [pages, setPages] = useState<PageItem[]>([]);
   const [stage, setStage] = useState<PanelStage>('IDLE');
@@ -66,9 +66,10 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
   const [coreVocabOpen, setCoreVocabOpen] = useState(true);
   const [secVocabOpen, setSecVocabOpen] = useState(false);
   const [grammarOpen, setGrammarOpen] = useState(true);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; term: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; term: string; subtype: string } | null>(null);
   const [addItemText, setAddItemText] = useState('');
   const [addItemType, setAddItemType] = useState<'vocabulary' | 'grammar'>('vocabulary');
+  const [addItemCefr, setAddItemCefr] = useState<string>('');
   
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -248,7 +249,7 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
       return (
         <div
           key={item.term}
-          onContextMenu={e => { e.preventDefault(); if (!excl) setContextMenu({ x: e.clientX, y: e.clientY, term: item.term }); }}
+          onContextMenu={e => { e.preventDefault(); if (!excl) setContextMenu({ x: e.clientX, y: e.clientY, term: item.term, subtype: item.subtype }); }}
           className={`group inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-bold border transition-all select-none ${
             excl
               ? 'bg-gray-50 text-gray-300 border-gray-100'
@@ -402,34 +403,47 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
                 </div>
 
                 {/* Add item */}
-                <div className="flex gap-1.5">
-                  <input
-                    value={addItemText}
-                    onChange={e => setAddItemText(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && addItemText.trim()) {
-                        addPoolItem(addItemText, addItemType);
-                        setAddItemText('');
-                      }
-                    }}
-                    placeholder="Add word or grammar..."
-                    className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-[10px] font-bold outline-none focus:border-coral transition-colors placeholder-gray-300"
-                  />
-                  <select
-                    value={addItemType}
-                    onChange={e => setAddItemType(e.target.value as 'vocabulary' | 'grammar')}
-                    className="px-2 py-2 bg-gray-50 border border-gray-200 rounded-xl text-[9px] font-black uppercase outline-none focus:border-coral text-gray-500"
-                  >
-                    <option value="vocabulary">Vocab</option>
-                    <option value="grammar">Grammar</option>
-                  </select>
-                  <button
-                    onClick={() => { if (addItemText.trim()) { addPoolItem(addItemText, addItemType); setAddItemText(''); } }}
-                    disabled={!addItemText.trim()}
-                    className="px-3 py-2 bg-coral text-white rounded-xl text-[10px] font-black disabled:opacity-30 hover:bg-[#DC2E4A] transition-colors"
-                  >
-                    +
-                  </button>
+                <div className="space-y-1.5">
+                  <div className="flex gap-1.5">
+                    <input
+                      value={addItemText}
+                      onChange={e => setAddItemText(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && addItemText.trim()) {
+                          addPoolItem(addItemText, addItemType, (addItemCefr || combinedExtraction?.level || 'A1') as any);
+                          setAddItemText('');
+                        }
+                      }}
+                      placeholder="Add word or grammar point..."
+                      className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-[10px] font-bold outline-none focus:border-coral transition-colors placeholder-gray-300"
+                    />
+                    <button
+                      onClick={() => { if (addItemText.trim()) { addPoolItem(addItemText, addItemType, (addItemCefr || combinedExtraction?.level || 'A1') as any); setAddItemText(''); } }}
+                      disabled={!addItemText.trim()}
+                      className="px-3 py-2 bg-coral text-white rounded-xl text-[10px] font-black disabled:opacity-30 hover:bg-[#DC2E4A] transition-colors"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <select
+                      value={addItemType}
+                      onChange={e => setAddItemType(e.target.value as 'vocabulary' | 'grammar')}
+                      className="flex-1 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[9px] font-black uppercase outline-none focus:border-coral text-gray-500"
+                    >
+                      <option value="vocabulary">Vocabulary</option>
+                      <option value="grammar">Grammar</option>
+                    </select>
+                    <select
+                      value={addItemCefr || combinedExtraction?.level || 'A1'}
+                      onChange={e => setAddItemCefr(e.target.value)}
+                      className="flex-1 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[9px] font-black uppercase outline-none focus:border-coral text-gray-500"
+                    >
+                      {['Pre-A1','A1','A2','B1','B2','C1','C2'].map(l => (
+                        <option key={l} value={l}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 {/* Search */}
@@ -586,6 +600,14 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
             >
               Always exclude ∞
             </button>
+            {contextMenu.subtype === 'secondary' && (
+              <button
+                onClick={() => { moveToCore(contextMenu.term); setContextMenu(null); }}
+                className="w-full text-left px-4 py-2 text-[10px] font-bold text-blue-500 hover:bg-blue-50 uppercase tracking-widest transition-colors"
+              >
+                Move to Core
+              </button>
+            )}
           </div>
         )}
       </div>
