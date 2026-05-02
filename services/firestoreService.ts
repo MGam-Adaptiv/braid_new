@@ -705,3 +705,15 @@ export const getPoolPreferences = async (uid: string): Promise<PoolPreferences |
     return null;
   }
 };
+export const getMagicLinksForTeacher = async (userId: string) => {
+  try {
+    const snap = await db.collection('magicLinks')
+      .where('userId', '==', userId)
+      .orderBy('createdAt', 'desc')
+      .get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch {
+    const snap = await db.collection('magicLinks').where('userId', '==', userId).get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+};
