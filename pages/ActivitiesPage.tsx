@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { getActivities, deleteActivity, updateActivity, createMagicLink, getMagicLinksForActivity } from '../services/firestoreService';
+import { MyAnalyticsTab } from '../components/analytics/MyAnalyticsTab';
 import { SessionResultsModal } from '../components/modals/SessionResultsModal';
 import { ShareActivityModal } from '../components/modals/ShareActivityModal';
 import { ManageClassesModal } from '../components/modals/ManageClassesModal';
@@ -272,7 +273,7 @@ export const ActivitiesPage: React.FC = () => {
     topSources?: boolean;
   }>({});
   
-  const [activeTab, setActiveTab] = useState<'all' | 'drafts' | 'published'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'drafts' | 'published' | 'analytics'>('all');
   const [shareModalActivity, setShareModalActivity] = useState<Activity | null>(null);
   const [historyActivity, setHistoryActivity] = useState<Activity | null>(null);
   const [showManageClasses, setShowManageClasses] = useState(false);
@@ -507,7 +508,8 @@ export const ActivitiesPage: React.FC = () => {
               {[
                 { id: 'all', label: 'All Items' },
                 { id: 'drafts', label: 'Drafts' },
-                { id: 'published', label: 'Published' }
+                { id: 'published', label: 'Published' },
+                { id: 'analytics', label: 'Analytics' },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -523,7 +525,7 @@ export const ActivitiesPage: React.FC = () => {
               ))}
             </div>
 
-            <div className="flex gap-3">
+            {activeTab !== 'analytics' && <div className="flex gap-3">
               <div className="relative flex-1">
                 <Search className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
                 <input 
@@ -545,10 +547,10 @@ export const ActivitiesPage: React.FC = () => {
                 <Filter size={16} />
                 Filters
               </button>
-            </div>
+            </div>}
 
             {/* EXPANDED FILTERS */}
-            {showFilters && (
+            {activeTab !== 'analytics' && showFilters && (
               <div className="bg-white border border-gray-200 rounded-[24px] p-6 animate-in slide-in-from-top-2 duration-200 shadow-sm">
                 
                 {/* Favorites & Top Sources Toggle Row */}
@@ -679,7 +681,13 @@ export const ActivitiesPage: React.FC = () => {
 
       {/* MAIN CONTENT */}
       <main className="max-w-7xl mx-auto px-6 py-8 lg:px-8">
-        {draftActivities.length === 0 && publishedActivities.length === 0 ? (
+        {activeTab === 'analytics' && user ? (
+          <MyAnalyticsTab
+            activities={activities}
+            userId={user.uid}
+            onViewResults={(activity) => setResultsModalActivity(activity)}
+          />
+        ) : draftActivities.length === 0 && publishedActivities.length === 0 ? (
           <div className="py-32 text-center">
             <FileText size={32} className="mx-auto text-gray-300 mb-4" />
             <p className="text-gray-400 font-bold uppercase text-xs">No activities found</p>
