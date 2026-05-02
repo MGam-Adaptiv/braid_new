@@ -102,6 +102,7 @@ interface StudioContextType {
   alwaysExcludeItem: (term: string) => void;
   restoreItem: (term: string) => void;
   restoreAll: () => void;
+  addPoolItem: (term: string, type: 'vocabulary' | 'grammar') => void;
 
   // Variant History
   variants: ActivityVariant[];
@@ -176,6 +177,13 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const restoreAll = () => {
     setExcludedItems([]);
     setAlwaysExcludedItems([]);
+  };
+
+  const addPoolItem = (term: string, type: 'vocabulary' | 'grammar') => {
+    const trimmed = term.trim();
+    if (!trimmed || poolItems.some(i => i.term.toLowerCase() === trimmed.toLowerCase())) return;
+    const lvl = (combinedExtraction?.level as CEFRLevel) || 'A1';
+    setPoolItems(prev => [...prev, { term: trimmed, type, subtype: 'core', cefrLevel: lvl, pos: '', usageCount: 0 }]);
   };
 
   const addVariant = (variant: ActivityVariant) => {
@@ -465,6 +473,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       alwaysExcludeItem,
       restoreItem,
       restoreAll,
+      addPoolItem,
       variants,
       addVariant,
       restoreVariant,
