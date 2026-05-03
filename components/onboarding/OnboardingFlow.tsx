@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { saveTeacherProfile } from '../../services/userService';
-import { CheckCircle2, ChevronRight, ChevronLeft } from 'lucide-react';
+import { CheckCircle2, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
 
 export interface TeacherProfile {
   country: string;
@@ -15,57 +15,6 @@ interface Props {
   userName: string | null;
   onComplete: () => void;
 }
-
-// ─── City data ────────────────────────────────────────────────────────────────
-const CITIES_BY_COUNTRY: Record<string, string[]> = {
-  Argentina:        ['Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'Tucumán', 'Other'],
-  Australia:        ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Other'],
-  Austria:          ['Vienna', 'Graz', 'Linz', 'Salzburg', 'Other'],
-  Brazil:           ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador', 'Fortaleza', 'Belo Horizonte', 'Curitiba', 'Other'],
-  Canada:           ['Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Ottawa', 'Other'],
-  Chile:            ['Santiago', 'Valparaíso', 'Concepción', 'Antofagasta', 'Other'],
-  China:            ['Beijing', 'Shanghai', 'Guangzhou', 'Shenzhen', 'Chengdu', 'Hangzhou', 'Wuhan', 'Nanjing', 'Other'],
-  Colombia:         ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena', 'Other'],
-  'Czech Republic': ['Prague', 'Brno', 'Ostrava', 'Plzeň', 'Other'],
-  Ecuador:          ['Quito', 'Guayaquil', 'Cuenca', 'Other'],
-  Egypt:            ['Cairo', 'Alexandria', 'Giza', 'Luxor', 'Aswan', 'Other'],
-  France:           ['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Bordeaux', 'Other'],
-  Germany:          ['Berlin', 'Munich', 'Hamburg', 'Frankfurt', 'Cologne', 'Stuttgart', 'Düsseldorf', 'Leipzig', 'Other'],
-  Greece:           ['Athens', 'Thessaloniki', 'Patras', 'Heraklion', 'Larissa', 'Volos', 'Rhodes', 'Ioannina', 'Other'],
-  Hungary:          ['Budapest', 'Debrecen', 'Miskolc', 'Pécs', 'Győr', 'Other'],
-  Indonesia:        ['Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Bali', 'Yogyakarta', 'Other'],
-  Italy:            ['Rome', 'Milan', 'Naples', 'Turin', 'Florence', 'Bologna', 'Genoa', 'Palermo', 'Other'],
-  Japan:            ['Tokyo', 'Osaka', 'Kyoto', 'Yokohama', 'Nagoya', 'Sapporo', 'Fukuoka', 'Kobe', 'Other'],
-  Jordan:           ['Amman', 'Zarqa', 'Irbid', 'Other'],
-  Kuwait:           ['Kuwait City', 'Hawalli', 'Salmiya', 'Other'],
-  Malaysia:         ['Kuala Lumpur', 'George Town', 'Johor Bahru', 'Kota Kinabalu', 'Other'],
-  Mexico:           ['Mexico City', 'Guadalajara', 'Monterrey', 'Puebla', 'Cancún', 'Mérida', 'Other'],
-  Morocco:          ['Casablanca', 'Rabat', 'Marrakech', 'Fes', 'Tangier', 'Agadir', 'Other'],
-  Netherlands:      ['Amsterdam', 'Rotterdam', 'The Hague', 'Utrecht', 'Eindhoven', 'Other'],
-  'New Zealand':    ['Auckland', 'Wellington', 'Christchurch', 'Hamilton', 'Other'],
-  Peru:             ['Lima', 'Arequipa', 'Trujillo', 'Cusco', 'Other'],
-  Poland:           ['Warsaw', 'Kraków', 'Wrocław', 'Gdańsk', 'Poznań', 'Łódź', 'Other'],
-  Portugal:         ['Lisbon', 'Porto', 'Braga', 'Coimbra', 'Faro', 'Other'],
-  Qatar:            ['Doha', 'Al Rayyan', 'Other'],
-  Romania:          ['Bucharest', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Constanța', 'Other'],
-  Russia:           ['Moscow', 'Saint Petersburg', 'Novosibirsk', 'Ekaterinburg', 'Kazan', 'Other'],
-  'Saudi Arabia':   ['Riyadh', 'Jeddah', 'Mecca', 'Medina', 'Dammam', 'Khobar', 'Other'],
-  'South Korea':    ['Seoul', 'Busan', 'Incheon', 'Daegu', 'Gwangju', 'Daejeon', 'Other'],
-  Spain:            ['Madrid', 'Barcelona', 'Valencia', 'Seville', 'Bilbao', 'Málaga', 'Zaragoza', 'Murcia', 'Other'],
-  Sweden:           ['Stockholm', 'Gothenburg', 'Malmö', 'Uppsala', 'Other'],
-  Switzerland:      ['Zurich', 'Geneva', 'Basel', 'Bern', 'Other'],
-  Taiwan:           ['Taipei', 'Kaohsiung', 'Taichung', 'Tainan', 'Other'],
-  Thailand:         ['Bangkok', 'Chiang Mai', 'Phuket', 'Pattaya', 'Chiang Rai', 'Other'],
-  Turkey:           ['Istanbul', 'Ankara', 'Izmir', 'Bursa', 'Antalya', 'Adana', 'Gaziantep', 'Konya', 'Other'],
-  UAE:              ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Other'],
-  Ukraine:          ['Kyiv', 'Kharkiv', 'Odessa', 'Lviv', 'Dnipro', 'Other'],
-  'United Kingdom': ['London', 'Manchester', 'Birmingham', 'Leeds', 'Glasgow', 'Edinburgh', 'Bristol', 'Other'],
-  'United States':  ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Miami', 'Boston', 'Other'],
-  Venezuela:        ['Caracas', 'Maracaibo', 'Valencia', 'Barquisimeto', 'Other'],
-  Vietnam:          ['Ho Chi Minh City', 'Hanoi', 'Da Nang', 'Hai Phong', 'Other'],
-};
-
-const COUNTRIES = [...Object.keys(CITIES_BY_COUNTRY).sort(), 'Other'];
 
 // ─── Chip options ─────────────────────────────────────────────────────────────
 const SCHOOL_TYPES = [
@@ -136,8 +85,65 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
     classSize: [],
   });
 
+  // API state
+  const [countries, setCountries] = useState<string[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState(true);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [cityFetchFailed, setCityFetchFailed] = useState(false);
+
   const firstName = userName?.split(' ')[0] || 'there';
-  const cityOptions = profile.country ? (CITIES_BY_COUNTRY[profile.country] ?? []) : [];
+
+  // Fetch countries on mount
+  useEffect(() => {
+    fetch('https://countriesnow.space/api/v0.1/countries')
+      .then(r => r.json())
+      .then(data => {
+        const names: string[] = data.data
+          .map((c: any) => c.country)
+          .filter(Boolean)
+          .sort();
+        setCountries(names);
+      })
+      .catch(() => {
+        // Fallback: minimal list so the flow isn't blocked
+        setCountries([
+          'Argentina', 'Australia', 'Brazil', 'Canada', 'China', 'Colombia',
+          'Egypt', 'France', 'Germany', 'Greece', 'Indonesia', 'Italy',
+          'Japan', 'Mexico', 'Morocco', 'Netherlands', 'Poland', 'Portugal',
+          'Romania', 'Russia', 'Saudi Arabia', 'South Korea', 'Spain',
+          'Taiwan', 'Thailand', 'Turkey', 'UAE', 'Ukraine',
+          'United Kingdom', 'United States', 'Vietnam', 'Other',
+        ]);
+      })
+      .finally(() => setLoadingCountries(false));
+  }, []);
+
+  // Fetch cities when country changes
+  useEffect(() => {
+    if (!profile.country) { setCities([]); return; }
+    setCityFetchFailed(false);
+    setLoadingCities(true);
+    setCities([]);
+    setProfile(p => ({ ...p, city: '' }));
+
+    fetch('https://countriesnow.space/api/v0.1/countries/cities', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ country: profile.country }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error || !data.data?.length) {
+          setCityFetchFailed(true);
+        } else {
+          const sorted: string[] = [...data.data].sort();
+          setCities([...sorted, 'Other']);
+        }
+      })
+      .catch(() => setCityFetchFailed(true))
+      .finally(() => setLoadingCities(false));
+  }, [profile.country]);
 
   const toggle = (field: 'schoolType' | 'ageRange' | 'classSize', value: string) => {
     setProfile(p => {
@@ -152,7 +158,7 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
   };
 
   const canAdvance = () => {
-    if (step === 0) return profile.country !== '';
+    if (step === 0) return profile.country !== '' && !loadingCities;
     if (step === 1) return profile.schoolType.length > 0;
     if (step === 2) return profile.ageRange.length > 0;
     if (step === 3) return profile.classSize.length > 0;
@@ -174,7 +180,7 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
       onComplete();
     } catch (e) {
       console.error('Failed to save profile:', e);
-      onComplete(); // Don't block the user on a network error
+      onComplete();
     } finally {
       setSaving(false);
     }
@@ -189,7 +195,6 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
     onComplete();
   };
 
-  // ─── Step headings ──────────────────────────────────────────────────────────
   const headings = [
     { title: `Hey ${firstName} 👋`, sub: 'Tell us where you teach' },
     { title: 'Where do you work?',  sub: 'Select all that apply' },
@@ -203,7 +208,6 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
 
         {/* Top bar */}
         <div className="bg-gray-900 px-6 pt-6 pb-5">
-          {/* Progress dots */}
           <div className="flex items-center gap-1.5 mb-5">
             {STEPS.map((_, i) => (
               <div
@@ -231,53 +235,84 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
           {/* Step 1 — Country + City */}
           {step === 0 && (
             <div className="space-y-4">
+
+              {/* Country */}
               <div>
                 <label className="block text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">
                   Country
                 </label>
-                <select
-                  value={profile.country}
-                  onChange={e => setProfile(p => ({ ...p, country: e.target.value, city: '' }))}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors appearance-none cursor-pointer"
-                >
-                  <option value="">Select a country...</option>
-                  {COUNTRIES.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                {loadingCountries ? (
+                  <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                    <Loader2 size={14} className="animate-spin text-gray-400" />
+                    <span className="text-sm text-gray-400 font-bold">Loading countries...</span>
+                  </div>
+                ) : (
+                  <select
+                    value={profile.country}
+                    onChange={e => setProfile(p => ({ ...p, country: e.target.value, city: '' }))}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors appearance-none cursor-pointer"
+                  >
+                    <option value="">Select a country...</option>
+                    {countries.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                )}
               </div>
 
+              {/* City — shown once country is picked */}
               {profile.country && (
                 <div>
                   <label className="block text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">
                     City <span className="text-gray-300 normal-case tracking-normal font-bold">(optional)</span>
                   </label>
-                  {cityOptions.length > 0 ? (
-                    <select
-                      value={profile.city}
-                      onChange={e => setProfile(p => ({ ...p, city: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors appearance-none cursor-pointer"
-                    >
-                      <option value="">Select a city...</option>
-                      {cityOptions.map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  ) : (
+
+                  {loadingCities ? (
+                    <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                      <Loader2 size={14} className="animate-spin text-gray-400" />
+                      <span className="text-sm text-gray-400 font-bold">Loading cities...</span>
+                    </div>
+                  ) : cityFetchFailed ? (
+                    // API couldn't find cities — fall back to free text
                     <input
                       type="text"
+                      autoFocus
                       value={profile.city}
                       onChange={e => setProfile(p => ({ ...p, city: e.target.value }))}
-                      placeholder="e.g. Lagos"
+                      placeholder="Type your city..."
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors placeholder:font-normal placeholder:text-gray-400"
                     />
+                  ) : (
+                    <>
+                      <select
+                        value={profile.city}
+                        onChange={e => setProfile(p => ({ ...p, city: e.target.value }))}
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors appearance-none cursor-pointer"
+                      >
+                        <option value="">Select a city...</option>
+                        {cities.map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+
+                      {/* Free-text input when "Other" city is selected */}
+                      {profile.city === 'Other' && (
+                        <input
+                          type="text"
+                          autoFocus
+                          placeholder="Type your city..."
+                          onChange={e => setProfile(p => ({ ...p, city: e.target.value || 'Other' }))}
+                          className="mt-3 w-full px-4 py-3 bg-gray-50 border-2 border-coral rounded-xl text-sm font-bold text-gray-900 focus:outline-none placeholder:font-normal placeholder:text-gray-400"
+                        />
+                      )}
+                    </>
                   )}
                 </div>
               )}
             </div>
           )}
 
-          {/* Step 2 — School type (multi) */}
+          {/* Step 2 — School type */}
           {step === 1 && (
             <MultiChipGrid
               options={SCHOOL_TYPES}
@@ -286,7 +321,7 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
             />
           )}
 
-          {/* Step 3 — Age range (multi) */}
+          {/* Step 3 — Age range */}
           {step === 2 && (
             <MultiChipGrid
               options={AGE_RANGES}
@@ -295,7 +330,7 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
             />
           )}
 
-          {/* Step 4 — Class size (multi) */}
+          {/* Step 4 — Class size */}
           {step === 3 && (
             <MultiChipGrid
               options={CLASS_SIZES}
@@ -343,4 +378,5 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
     </div>
   );
 };
+
 
