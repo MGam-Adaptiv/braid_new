@@ -65,7 +65,7 @@ const CITIES_BY_COUNTRY: Record<string, string[]> = {
   Vietnam:          ['Ho Chi Minh City', 'Hanoi', 'Da Nang', 'Hai Phong', 'Other'],
 };
 
-const COUNTRIES = Object.keys(CITIES_BY_COUNTRY).sort();
+const COUNTRIES = [...Object.keys(CITIES_BY_COUNTRY).sort(), 'Other'];
 
 // ─── Chip options ─────────────────────────────────────────────────────────────
 const SCHOOL_TYPES = [
@@ -247,21 +247,31 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
                 </select>
               </div>
 
-              {cityOptions.length > 0 && (
+              {profile.country && (
                 <div>
                   <label className="block text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">
                     City <span className="text-gray-300 normal-case tracking-normal font-bold">(optional)</span>
                   </label>
-                  <select
-                    value={profile.city}
-                    onChange={e => setProfile(p => ({ ...p, city: e.target.value }))}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors appearance-none cursor-pointer"
-                  >
-                    <option value="">Select a city...</option>
-                    {cityOptions.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                  {cityOptions.length > 0 ? (
+                    <select
+                      value={profile.city}
+                      onChange={e => setProfile(p => ({ ...p, city: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors appearance-none cursor-pointer"
+                    >
+                      <option value="">Select a city...</option>
+                      {cityOptions.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={profile.city}
+                      onChange={e => setProfile(p => ({ ...p, city: e.target.value }))}
+                      placeholder="e.g. Lagos"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors placeholder:font-normal placeholder:text-gray-400"
+                    />
+                  )}
                 </div>
               )}
             </div>
