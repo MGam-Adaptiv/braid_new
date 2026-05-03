@@ -2679,12 +2679,12 @@ export const AdminDashboard: React.FC = () => {
                           <div className="w-32">
                             <div className="flex justify-between text-[10px] mb-1 font-bold uppercase text-gray-400">
                               <span>{user.totalTokensUsed?.toLocaleString() || 0}</span>
-                              <span>{(50000 + (user.bonusTokens || 0)).toLocaleString()} Limit</span>
+                              <span>{((user.tokenLimit || 50000) + (user.bonusTokens || 0)).toLocaleString()} Limit</span>
                             </div>
                             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full rounded-full ${user.totalTokensUsed > (50000 + (user.bonusTokens || 0)) * 0.8 ? 'bg-red-500' : 'bg-blue-500'}`}
-                                style={{ width: `${Math.min(((user.totalTokensUsed || 0) / (50000 + (user.bonusTokens || 0))) * 100, 100)}%` }}
+                              <div
+                                className={`h-full rounded-full ${user.totalTokensUsed > ((user.tokenLimit || 50000) + (user.bonusTokens || 0)) * 0.8 ? 'bg-red-500' : 'bg-blue-500'}`}
+                                style={{ width: `${Math.min(((user.totalTokensUsed || 0) / ((user.tokenLimit || 50000) + (user.bonusTokens || 0))) * 100, 100)}%` }}
                               />
                             </div>
                           </div>
