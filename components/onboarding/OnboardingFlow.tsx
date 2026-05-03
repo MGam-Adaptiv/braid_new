@@ -4,9 +4,10 @@ import { CheckCircle2, ChevronRight, ChevronLeft } from 'lucide-react';
 
 export interface TeacherProfile {
   country: string;
-  schoolType: string;
-  ageRange: string;
-  classSize: string;
+  city: string;
+  schoolType: string[];
+  ageRange: string[];
+  classSize: string[];
 }
 
 interface Props {
@@ -15,16 +16,58 @@ interface Props {
   onComplete: () => void;
 }
 
-const COUNTRIES = [
-  'Argentina', 'Australia', 'Austria', 'Brazil', 'Canada', 'Chile', 'China',
-  'Colombia', 'Czech Republic', 'Ecuador', 'Egypt', 'France', 'Germany', 'Greece',
-  'Hungary', 'Indonesia', 'Italy', 'Japan', 'Jordan', 'Kuwait', 'Malaysia',
-  'Mexico', 'Morocco', 'Netherlands', 'New Zealand', 'Peru', 'Poland', 'Portugal',
-  'Qatar', 'Romania', 'Russia', 'Saudi Arabia', 'South Korea', 'Spain', 'Sweden',
-  'Switzerland', 'Taiwan', 'Thailand', 'Turkey', 'UAE', 'Ukraine', 'United Kingdom',
-  'United States', 'Venezuela', 'Vietnam', 'Other',
-];
+// ─── City data ────────────────────────────────────────────────────────────────
+const CITIES_BY_COUNTRY: Record<string, string[]> = {
+  Argentina:        ['Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'Tucumán', 'Other'],
+  Australia:        ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Other'],
+  Austria:          ['Vienna', 'Graz', 'Linz', 'Salzburg', 'Other'],
+  Brazil:           ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador', 'Fortaleza', 'Belo Horizonte', 'Curitiba', 'Other'],
+  Canada:           ['Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Ottawa', 'Other'],
+  Chile:            ['Santiago', 'Valparaíso', 'Concepción', 'Antofagasta', 'Other'],
+  China:            ['Beijing', 'Shanghai', 'Guangzhou', 'Shenzhen', 'Chengdu', 'Hangzhou', 'Wuhan', 'Nanjing', 'Other'],
+  Colombia:         ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena', 'Other'],
+  'Czech Republic': ['Prague', 'Brno', 'Ostrava', 'Plzeň', 'Other'],
+  Ecuador:          ['Quito', 'Guayaquil', 'Cuenca', 'Other'],
+  Egypt:            ['Cairo', 'Alexandria', 'Giza', 'Luxor', 'Aswan', 'Other'],
+  France:           ['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Bordeaux', 'Other'],
+  Germany:          ['Berlin', 'Munich', 'Hamburg', 'Frankfurt', 'Cologne', 'Stuttgart', 'Düsseldorf', 'Leipzig', 'Other'],
+  Greece:           ['Athens', 'Thessaloniki', 'Patras', 'Heraklion', 'Larissa', 'Volos', 'Rhodes', 'Ioannina', 'Other'],
+  Hungary:          ['Budapest', 'Debrecen', 'Miskolc', 'Pécs', 'Győr', 'Other'],
+  Indonesia:        ['Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Bali', 'Yogyakarta', 'Other'],
+  Italy:            ['Rome', 'Milan', 'Naples', 'Turin', 'Florence', 'Bologna', 'Genoa', 'Palermo', 'Other'],
+  Japan:            ['Tokyo', 'Osaka', 'Kyoto', 'Yokohama', 'Nagoya', 'Sapporo', 'Fukuoka', 'Kobe', 'Other'],
+  Jordan:           ['Amman', 'Zarqa', 'Irbid', 'Other'],
+  Kuwait:           ['Kuwait City', 'Hawalli', 'Salmiya', 'Other'],
+  Malaysia:         ['Kuala Lumpur', 'George Town', 'Johor Bahru', 'Kota Kinabalu', 'Other'],
+  Mexico:           ['Mexico City', 'Guadalajara', 'Monterrey', 'Puebla', 'Cancún', 'Mérida', 'Other'],
+  Morocco:          ['Casablanca', 'Rabat', 'Marrakech', 'Fes', 'Tangier', 'Agadir', 'Other'],
+  Netherlands:      ['Amsterdam', 'Rotterdam', 'The Hague', 'Utrecht', 'Eindhoven', 'Other'],
+  'New Zealand':    ['Auckland', 'Wellington', 'Christchurch', 'Hamilton', 'Other'],
+  Peru:             ['Lima', 'Arequipa', 'Trujillo', 'Cusco', 'Other'],
+  Poland:           ['Warsaw', 'Kraków', 'Wrocław', 'Gdańsk', 'Poznań', 'Łódź', 'Other'],
+  Portugal:         ['Lisbon', 'Porto', 'Braga', 'Coimbra', 'Faro', 'Other'],
+  Qatar:            ['Doha', 'Al Rayyan', 'Other'],
+  Romania:          ['Bucharest', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Constanța', 'Other'],
+  Russia:           ['Moscow', 'Saint Petersburg', 'Novosibirsk', 'Ekaterinburg', 'Kazan', 'Other'],
+  'Saudi Arabia':   ['Riyadh', 'Jeddah', 'Mecca', 'Medina', 'Dammam', 'Khobar', 'Other'],
+  'South Korea':    ['Seoul', 'Busan', 'Incheon', 'Daegu', 'Gwangju', 'Daejeon', 'Other'],
+  Spain:            ['Madrid', 'Barcelona', 'Valencia', 'Seville', 'Bilbao', 'Málaga', 'Zaragoza', 'Murcia', 'Other'],
+  Sweden:           ['Stockholm', 'Gothenburg', 'Malmö', 'Uppsala', 'Other'],
+  Switzerland:      ['Zurich', 'Geneva', 'Basel', 'Bern', 'Other'],
+  Taiwan:           ['Taipei', 'Kaohsiung', 'Taichung', 'Tainan', 'Other'],
+  Thailand:         ['Bangkok', 'Chiang Mai', 'Phuket', 'Pattaya', 'Chiang Rai', 'Other'],
+  Turkey:           ['Istanbul', 'Ankara', 'Izmir', 'Bursa', 'Antalya', 'Adana', 'Gaziantep', 'Konya', 'Other'],
+  UAE:              ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Other'],
+  Ukraine:          ['Kyiv', 'Kharkiv', 'Odessa', 'Lviv', 'Dnipro', 'Other'],
+  'United Kingdom': ['London', 'Manchester', 'Birmingham', 'Leeds', 'Glasgow', 'Edinburgh', 'Bristol', 'Other'],
+  'United States':  ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Miami', 'Boston', 'Other'],
+  Venezuela:        ['Caracas', 'Maracaibo', 'Valencia', 'Barquisimeto', 'Other'],
+  Vietnam:          ['Ho Chi Minh City', 'Hanoi', 'Da Nang', 'Hai Phong', 'Other'],
+};
 
+const COUNTRIES = Object.keys(CITIES_BY_COUNTRY).sort();
+
+// ─── Chip options ─────────────────────────────────────────────────────────────
 const SCHOOL_TYPES = [
   { value: 'language_school', label: 'Language School', emoji: '🏫' },
   { value: 'state_school',    label: 'State School',    emoji: '🏛️' },
@@ -40,58 +83,79 @@ const AGE_RANGES = [
 ];
 
 const CLASS_SIZES = [
-  { value: 'one_to_one', label: '1-to-1',      sub: 'Just you & student', emoji: '🤝' },
-  { value: 'small',      label: 'Small',        sub: '2–8 students',       emoji: '👫' },
-  { value: 'group',      label: 'Group',        sub: '9–20 students',      emoji: '👨‍👩‍👧‍👦' },
-  { value: 'large',      label: 'Large',        sub: '20+ students',       emoji: '🏟️' },
+  { value: 'one_to_one', label: '1-to-1',  sub: 'Just you & student', emoji: '🤝' },
+  { value: 'small',      label: 'Small',   sub: '2–8 students',       emoji: '👫' },
+  { value: 'group',      label: 'Group',   sub: '9–20 students',      emoji: '👨‍👩‍👧‍👦' },
+  { value: 'large',      label: 'Large',   sub: '20+ students',       emoji: '🏟️' },
 ];
 
-const STEPS = ['Country', 'School type', 'Students', 'Class size'];
+const STEPS = ['Location', 'School type', 'Students', 'Class size'];
 
-const ChipGrid: React.FC<{
+// ─── Multi-select chip grid ───────────────────────────────────────────────────
+const MultiChipGrid: React.FC<{
   options: { value: string; label: string; sub?: string; emoji: string }[];
-  selected: string;
-  onSelect: (v: string) => void;
-}> = ({ options, selected, onSelect }) => (
+  selected: string[];
+  onToggle: (v: string) => void;
+}> = ({ options, selected, onToggle }) => (
   <div className="grid grid-cols-2 gap-3">
-    {options.map(opt => (
-      <button
-        key={opt.value}
-        onClick={() => onSelect(opt.value)}
-        className={`relative flex flex-col items-start p-4 rounded-2xl border-2 text-left transition-all ${
-          selected === opt.value
-            ? 'border-coral bg-coral/5 shadow-sm'
-            : 'border-gray-200 bg-white hover:border-gray-300'
-        }`}
-      >
-        {selected === opt.value && (
-          <CheckCircle2 size={16} className="absolute top-3 right-3 text-coral" />
-        )}
-        <span className="text-2xl mb-2">{opt.emoji}</span>
-        <span className="text-sm font-black text-gray-900 uppercase tracking-tight">{opt.label}</span>
-        {opt.sub && <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{opt.sub}</span>}
-      </button>
-    ))}
+    {options.map(opt => {
+      const active = selected.includes(opt.value);
+      return (
+        <button
+          key={opt.value}
+          onClick={() => onToggle(opt.value)}
+          className={`relative flex flex-col items-start p-4 rounded-2xl border-2 text-left transition-all ${
+            active
+              ? 'border-coral bg-coral/5 shadow-sm'
+              : 'border-gray-200 bg-white hover:border-gray-300'
+          }`}
+        >
+          {active && (
+            <CheckCircle2 size={16} className="absolute top-3 right-3 text-coral" />
+          )}
+          <span className="text-2xl mb-2">{opt.emoji}</span>
+          <span className="text-sm font-black text-gray-900 uppercase tracking-tight">{opt.label}</span>
+          {opt.sub && (
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{opt.sub}</span>
+          )}
+        </button>
+      );
+    })}
   </div>
 );
 
+// ─── Main component ───────────────────────────────────────────────────────────
 export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }) => {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<TeacherProfile>({
     country: '',
-    schoolType: '',
-    ageRange: '',
-    classSize: '',
+    city: '',
+    schoolType: [],
+    ageRange: [],
+    classSize: [],
   });
 
   const firstName = userName?.split(' ')[0] || 'there';
+  const cityOptions = profile.country ? (CITIES_BY_COUNTRY[profile.country] ?? []) : [];
+
+  const toggle = (field: 'schoolType' | 'ageRange' | 'classSize', value: string) => {
+    setProfile(p => {
+      const current = p[field];
+      return {
+        ...p,
+        [field]: current.includes(value)
+          ? current.filter(v => v !== value)
+          : [...current, value],
+      };
+    });
+  };
 
   const canAdvance = () => {
     if (step === 0) return profile.country !== '';
-    if (step === 1) return profile.schoolType !== '';
-    if (step === 2) return profile.ageRange !== '';
-    if (step === 3) return profile.classSize !== '';
+    if (step === 1) return profile.schoolType.length > 0;
+    if (step === 2) return profile.ageRange.length > 0;
+    if (step === 3) return profile.classSize.length > 0;
     return false;
   };
 
@@ -110,15 +174,13 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
       onComplete();
     } catch (e) {
       console.error('Failed to save profile:', e);
-      // Still let them in — don't block on a network error
-      onComplete();
+      onComplete(); // Don't block the user on a network error
     } finally {
       setSaving(false);
     }
   };
 
   const handleSkip = async () => {
-    // Save partial profile so the overlay doesn't re-appear
     setSaving(true);
     try {
       await saveTeacherProfile(userId, { ...profile, skipped: true } as any);
@@ -126,6 +188,14 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
     setSaving(false);
     onComplete();
   };
+
+  // ─── Step headings ──────────────────────────────────────────────────────────
+  const headings = [
+    { title: `Hey ${firstName} 👋`, sub: 'Tell us where you teach' },
+    { title: 'Where do you work?',  sub: 'Select all that apply' },
+    { title: 'Who do you teach?',   sub: 'Select all that apply' },
+    { title: 'Class sizes?',        sub: 'Select all that apply' },
+  ];
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -144,96 +214,83 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
               />
             ))}
           </div>
-
-          {/* Step label */}
           <p className="text-[9px] font-black uppercase tracking-widest text-coral mb-1">
             Step {step + 1} of {STEPS.length} — {STEPS[step]}
           </p>
-
-          {/* Heading */}
-          {step === 0 && (
-            <>
-              <h2 className="text-xl font-black text-white uppercase leading-tight">
-                Hey {firstName} 👋
-              </h2>
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                Tell us where you teach
-              </p>
-            </>
-          )}
-          {step === 1 && (
-            <>
-              <h2 className="text-xl font-black text-white uppercase leading-tight">
-                Where do you work?
-              </h2>
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                Select your school type
-              </p>
-            </>
-          )}
-          {step === 2 && (
-            <>
-              <h2 className="text-xl font-black text-white uppercase leading-tight">
-                Who do you teach?
-              </h2>
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                Your students' age range
-              </p>
-            </>
-          )}
-          {step === 3 && (
-            <>
-              <h2 className="text-xl font-black text-white uppercase leading-tight">
-                How big are your classes?
-              </h2>
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                Typical class size
-              </p>
-            </>
-          )}
+          <h2 className="text-xl font-black text-white uppercase leading-tight">
+            {headings[step].title}
+          </h2>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+            {headings[step].sub}
+          </p>
         </div>
 
         {/* Step content */}
         <div className="p-6">
+
+          {/* Step 1 — Country + City */}
           {step === 0 && (
-            <div>
-              <label className="block text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                Country
-              </label>
-              <select
-                value={profile.country}
-                onChange={e => setProfile(p => ({ ...p, country: e.target.value }))}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors appearance-none cursor-pointer"
-              >
-                <option value="">Select a country...</option>
-                {COUNTRIES.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                  Country
+                </label>
+                <select
+                  value={profile.country}
+                  onChange={e => setProfile(p => ({ ...p, country: e.target.value, city: '' }))}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors appearance-none cursor-pointer"
+                >
+                  <option value="">Select a country...</option>
+                  {COUNTRIES.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              {cityOptions.length > 0 && (
+                <div>
+                  <label className="block text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                    City <span className="text-gray-300 normal-case tracking-normal font-bold">(optional)</span>
+                  </label>
+                  <select
+                    value={profile.city}
+                    onChange={e => setProfile(p => ({ ...p, city: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors appearance-none cursor-pointer"
+                  >
+                    <option value="">Select a city...</option>
+                    {cityOptions.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
 
+          {/* Step 2 — School type (multi) */}
           {step === 1 && (
-            <ChipGrid
+            <MultiChipGrid
               options={SCHOOL_TYPES}
               selected={profile.schoolType}
-              onSelect={v => setProfile(p => ({ ...p, schoolType: v }))}
+              onToggle={v => toggle('schoolType', v)}
             />
           )}
 
+          {/* Step 3 — Age range (multi) */}
           {step === 2 && (
-            <ChipGrid
+            <MultiChipGrid
               options={AGE_RANGES}
               selected={profile.ageRange}
-              onSelect={v => setProfile(p => ({ ...p, ageRange: v }))}
+              onToggle={v => toggle('ageRange', v)}
             />
           )}
 
+          {/* Step 4 — Class size (multi) */}
           {step === 3 && (
-            <ChipGrid
+            <MultiChipGrid
               options={CLASS_SIZES}
               selected={profile.classSize}
-              onSelect={v => setProfile(p => ({ ...p, classSize: v }))}
+              onToggle={v => toggle('classSize', v)}
             />
           )}
 
@@ -276,3 +333,4 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
     </div>
   );
 };
+
