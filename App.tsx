@@ -18,6 +18,7 @@ import { PrivacyPage } from './pages/PrivacyPage';
 import { TestPage } from './pages/TestPage';
 import { RestoreAccountPage } from './pages/RestoreAccountPage';
 import { createUserProfile, getUserProfile } from './services/userService';
+import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
 import { Toaster } from 'react-hot-toast';
 
 // New Component: Handles redirect logic based on user role at root path
@@ -59,14 +60,21 @@ const RootRedirect = () => {
 
 const AppContent = () => {
   const { user } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      createUserProfile(user.uid, user.email, user.displayName);
-    }
+    if (!user) return;
+    createUserProfile(user.uid, user.email, user.displayName);
+    // Show onboarding if teacher has no profile data yet
+    getUserProfile(user.uid).then(p => {
+      if (p && p.role !== 'admin' && !(p as any).profile) {
+        setShowOnboarding(true);
+      }
+    });
   }, [user]);
 
   return (
+    <>
     <Router>
       <Routes>
         {/* PUBLIC ROUTES */}
@@ -142,6 +150,14 @@ const AppContent = () => {
         } />
       </Routes>
     </Router>
+    {showOnboarding && user && (
+      <OnboardingFlow
+        userId={user.uid}
+        userName={user.displayName || user.email}
+        onComplete={() => setShowOnboarding(false)}
+      />
+    )}
+    </>
   );
 };
 
