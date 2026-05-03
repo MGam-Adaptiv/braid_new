@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { saveTeacherProfile } from '../../services/userService';
-import { CheckCircle2, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
+import { CheckCircle2, ChevronRight, ChevronLeft } from 'lucide-react';
 
 export interface TeacherProfile {
   country: string;
@@ -15,6 +15,57 @@ interface Props {
   userName: string | null;
   onComplete: () => void;
 }
+
+// ─── Hardcoded country → city data ───────────────────────────────────────────
+const LOCATION_DATA: Record<string, string[]> = {
+  Argentina:        ['Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'Tucumán', 'Mar del Plata', 'Other'],
+  Australia:        ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Other'],
+  Austria:          ['Vienna', 'Graz', 'Linz', 'Salzburg', 'Innsbruck', 'Other'],
+  Brazil:           ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador', 'Fortaleza', 'Belo Horizonte', 'Curitiba', 'Recife', 'Other'],
+  Canada:           ['Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Ottawa', 'Edmonton', 'Other'],
+  Chile:            ['Santiago', 'Valparaíso', 'Concepción', 'Antofagasta', 'Viña del Mar', 'Other'],
+  China:            ['Beijing', 'Shanghai', 'Guangzhou', 'Shenzhen', 'Chengdu', 'Hangzhou', 'Wuhan', 'Nanjing', 'Tianjin', 'Xi\'an', 'Other'],
+  Colombia:         ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena', 'Bucaramanga', 'Other'],
+  'Czech Republic': ['Prague', 'Brno', 'Ostrava', 'Plzeň', 'Liberec', 'Other'],
+  Ecuador:          ['Quito', 'Guayaquil', 'Cuenca', 'Santo Domingo', 'Other'],
+  Egypt:            ['Cairo', 'Alexandria', 'Giza', 'Luxor', 'Aswan', 'Hurghada', 'Other'],
+  France:           ['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Bordeaux', 'Lille', 'Other'],
+  Germany:          ['Berlin', 'Munich', 'Hamburg', 'Frankfurt', 'Cologne', 'Stuttgart', 'Düsseldorf', 'Leipzig', 'Dresden', 'Other'],
+  Greece:           ['Athens', 'Thessaloniki', 'Patras', 'Heraklion', 'Larissa', 'Volos', 'Rhodes', 'Ioannina', 'Kavala', 'Katerini', 'Other'],
+  Hungary:          ['Budapest', 'Debrecen', 'Miskolc', 'Pécs', 'Győr', 'Nyíregyháza', 'Other'],
+  Indonesia:        ['Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Bali', 'Yogyakarta', 'Semarang', 'Other'],
+  Italy:            ['Rome', 'Milan', 'Naples', 'Turin', 'Florence', 'Bologna', 'Genoa', 'Palermo', 'Venice', 'Other'],
+  Japan:            ['Tokyo', 'Osaka', 'Kyoto', 'Yokohama', 'Nagoya', 'Sapporo', 'Fukuoka', 'Kobe', 'Sendai', 'Other'],
+  Jordan:           ['Amman', 'Zarqa', 'Irbid', 'Aqaba', 'Other'],
+  Kuwait:           ['Kuwait City', 'Hawalli', 'Salmiya', 'Ahmadi', 'Other'],
+  Malaysia:         ['Kuala Lumpur', 'George Town', 'Johor Bahru', 'Kota Kinabalu', 'Ipoh', 'Other'],
+  Mexico:           ['Mexico City', 'Guadalajara', 'Monterrey', 'Puebla', 'Cancún', 'Mérida', 'Tijuana', 'Other'],
+  Morocco:          ['Casablanca', 'Rabat', 'Marrakech', 'Fes', 'Tangier', 'Agadir', 'Meknes', 'Other'],
+  Netherlands:      ['Amsterdam', 'Rotterdam', 'The Hague', 'Utrecht', 'Eindhoven', 'Groningen', 'Other'],
+  'New Zealand':    ['Auckland', 'Wellington', 'Christchurch', 'Hamilton', 'Dunedin', 'Other'],
+  Peru:             ['Lima', 'Arequipa', 'Trujillo', 'Cusco', 'Piura', 'Other'],
+  Poland:           ['Warsaw', 'Kraków', 'Wrocław', 'Gdańsk', 'Poznań', 'Łódź', 'Katowice', 'Other'],
+  Portugal:         ['Lisbon', 'Porto', 'Braga', 'Coimbra', 'Faro', 'Setúbal', 'Other'],
+  Qatar:            ['Doha', 'Al Rayyan', 'Al Wakrah', 'Other'],
+  Romania:          ['Bucharest', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Constanța', 'Brașov', 'Other'],
+  Russia:           ['Moscow', 'Saint Petersburg', 'Novosibirsk', 'Ekaterinburg', 'Kazan', 'Nizhny Novgorod', 'Other'],
+  'Saudi Arabia':   ['Riyadh', 'Jeddah', 'Mecca', 'Medina', 'Dammam', 'Khobar', 'Abha', 'Other'],
+  'South Korea':    ['Seoul', 'Busan', 'Incheon', 'Daegu', 'Gwangju', 'Daejeon', 'Suwon', 'Other'],
+  Spain:            ['Madrid', 'Barcelona', 'Valencia', 'Seville', 'Bilbao', 'Málaga', 'Zaragoza', 'Murcia', 'Alicante', 'Other'],
+  Sweden:           ['Stockholm', 'Gothenburg', 'Malmö', 'Uppsala', 'Västerås', 'Other'],
+  Switzerland:      ['Zurich', 'Geneva', 'Basel', 'Bern', 'Lausanne', 'Other'],
+  Taiwan:           ['Taipei', 'Kaohsiung', 'Taichung', 'Tainan', 'Hsinchu', 'Other'],
+  Thailand:         ['Bangkok', 'Chiang Mai', 'Phuket', 'Pattaya', 'Chiang Rai', 'Hua Hin', 'Other'],
+  Turkey:           ['Istanbul', 'Ankara', 'Izmir', 'Bursa', 'Antalya', 'Adana', 'Gaziantep', 'Konya', 'Mersin', 'Other'],
+  UAE:              ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Al Ain', 'Other'],
+  Ukraine:          ['Kyiv', 'Kharkiv', 'Odessa', 'Lviv', 'Dnipro', 'Zaporizhzhia', 'Other'],
+  'United Kingdom': ['London', 'Manchester', 'Birmingham', 'Leeds', 'Glasgow', 'Edinburgh', 'Bristol', 'Liverpool', 'Sheffield', 'Other'],
+  'United States':  ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Miami', 'Boston', 'Seattle', 'Dallas', 'Other'],
+  Venezuela:        ['Caracas', 'Maracaibo', 'Valencia', 'Barquisimeto', 'Maracay', 'Other'],
+  Vietnam:          ['Ho Chi Minh City', 'Hanoi', 'Da Nang', 'Hai Phong', 'Nha Trang', 'Other'],
+};
+
+const COUNTRIES = [...Object.keys(LOCATION_DATA).sort(), 'Other'];
 
 // ─── Chip options ─────────────────────────────────────────────────────────────
 const SCHOOL_TYPES = [
@@ -54,93 +105,92 @@ const MultiChipGrid: React.FC<{
           key={opt.value}
           onClick={() => onToggle(opt.value)}
           className={`relative flex flex-col items-start p-4 rounded-2xl border-2 text-left transition-all ${
-            active
-              ? 'border-coral bg-coral/5 shadow-sm'
-              : 'border-gray-200 bg-white hover:border-gray-300'
+            active ? 'border-coral bg-coral/5 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'
           }`}
         >
-          {active && (
-            <CheckCircle2 size={16} className="absolute top-3 right-3 text-coral" />
-          )}
+          {active && <CheckCircle2 size={16} className="absolute top-3 right-3 text-coral" />}
           <span className="text-2xl mb-2">{opt.emoji}</span>
           <span className="text-sm font-black text-gray-900 uppercase tracking-tight">{opt.label}</span>
-          {opt.sub && (
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{opt.sub}</span>
-          )}
+          {opt.sub && <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{opt.sub}</span>}
         </button>
       );
     })}
   </div>
 );
 
+// ─── Dropdown with chevron ────────────────────────────────────────────────────
+const SelectField: React.FC<{
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  placeholder: string;
+}> = ({ value, onChange, options, placeholder }) => (
+  <div className="relative">
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors appearance-none cursor-pointer pr-10"
+    >
+      <option value="">{placeholder}</option>
+      {options.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>
+    <ChevronRight size={16} className="absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-gray-400 pointer-events-none" />
+  </div>
+);
+
+// ─── Text input ───────────────────────────────────────────────────────────────
+const TextField: React.FC<{
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}> = ({ value, onChange, placeholder }) => (
+  <input
+    type="text"
+    autoFocus
+    value={value}
+    onChange={e => onChange(e.target.value)}
+    placeholder={placeholder}
+    className="w-full px-4 py-3 bg-gray-50 border-2 border-coral rounded-xl text-sm font-bold text-gray-900 focus:outline-none placeholder:font-normal placeholder:text-gray-400"
+  />
+);
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }) => {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [profile, setProfile] = useState<TeacherProfile>({
-    country: '',
-    city: '',
-    schoolType: [],
-    ageRange: [],
-    classSize: [],
-  });
 
-  // API state — one fetch gets countries + cities together
-  const [countryMap, setCountryMap] = useState<Record<string, string[]>>({});
-  const [countries, setCountries] = useState<string[]>([]);
-  const [loadingCountries, setLoadingCountries] = useState(true);
+  // Separate "selected" value from "custom typed" value for country + city
+  const [countrySelected, setCountrySelected] = useState('');
+  const [countryCustom, setCountryCustom]     = useState('');
+  const [citySelected, setCitySelected]       = useState('');
+  const [cityCustom, setCityCustom]           = useState('');
+
+  const [profile, setProfile] = useState<Omit<TeacherProfile, 'country' | 'city'>>({
+    schoolType: [],
+    ageRange:   [],
+    classSize:  [],
+  });
 
   const firstName = userName?.split(' ')[0] || 'there';
 
-  // Single fetch on mount — countries endpoint includes city arrays
-  useEffect(() => {
-    fetch('https://countriesnow.space/api/v0.1/countries')
-      .then(r => r.json())
-      .then(data => {
-        const map: Record<string, string[]> = {};
-        const names: string[] = [];
-        for (const entry of data.data) {
-          if (!entry.country) continue;
-          names.push(entry.country);
-          const sorted = [...(entry.cities ?? [])].sort();
-          if (sorted.length) sorted.push('Other');
-          map[entry.country] = sorted;
-        }
-        names.sort();
-        setCountries(names);
-        setCountryMap(map);
-      })
-      .catch(() => {
-        // Fallback country list if API is unreachable
-        setCountries([
-          'Argentina', 'Australia', 'Brazil', 'Canada', 'China', 'Colombia',
-          'Egypt', 'France', 'Germany', 'Greece', 'Indonesia', 'Italy',
-          'Japan', 'Mexico', 'Morocco', 'Netherlands', 'Poland', 'Portugal',
-          'Romania', 'Russia', 'Saudi Arabia', 'South Korea', 'Spain',
-          'Taiwan', 'Thailand', 'Turkey', 'UAE', 'Ukraine',
-          'United Kingdom', 'United States', 'Vietnam', 'Other',
-        ]);
-      })
-      .finally(() => setLoadingCountries(false));
-  }, []);
+  // Resolve final country string
+  const country = countrySelected === 'Other' ? countryCustom : countrySelected;
 
-  // Derive city list from map whenever country changes
-  const cities = profile.country ? (countryMap[profile.country] ?? []) : [];
+  // City options for selected country
+  const cityOptions = LOCATION_DATA[countrySelected] ?? [];
+
+  // Resolve final city string
+  const city = citySelected === 'Other' ? cityCustom : citySelected;
 
   const toggle = (field: 'schoolType' | 'ageRange' | 'classSize', value: string) => {
-    setProfile(p => {
-      const current = p[field];
-      return {
-        ...p,
-        [field]: current.includes(value)
-          ? current.filter(v => v !== value)
-          : [...current, value],
-      };
-    });
+    setProfile(p => ({
+      ...p,
+      [field]: p[field].includes(value) ? p[field].filter(v => v !== value) : [...p[field], value],
+    }));
   };
 
   const canAdvance = () => {
-    if (step === 0) return profile.country !== '' && !loadingCountries;
+    if (step === 0) return country.trim() !== '';
     if (step === 1) return profile.schoolType.length > 0;
     if (step === 2) return profile.ageRange.length > 0;
     if (step === 3) return profile.classSize.length > 0;
@@ -148,17 +198,14 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
   };
 
   const handleNext = async () => {
-    if (step < 3) {
-      setStep(s => s + 1);
-    } else {
-      await handleFinish();
-    }
+    if (step < 3) { setStep(s => s + 1); }
+    else { await handleFinish(); }
   };
 
   const handleFinish = async () => {
     setSaving(true);
     try {
-      await saveTeacherProfile(userId, profile);
+      await saveTeacherProfile(userId, { ...profile, country, city });
       onComplete();
     } catch (e) {
       console.error('Failed to save profile:', e);
@@ -168,14 +215,8 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
     }
   };
 
-  const handleSkip = async () => {
-    setSaving(true);
-    try {
-      await saveTeacherProfile(userId, { ...profile, skipped: true } as any);
-    } catch (_) {}
-    setSaving(false);
-    onComplete();
-  };
+  // Skip just closes — no Firestore write, so card reappears next login
+  const handleSkip = () => onComplete();
 
   const headings = [
     { title: `Hey ${firstName} 👋`, sub: 'Tell us where you teach' },
@@ -192,23 +233,16 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
         <div className="bg-gray-900 px-6 pt-6 pb-5">
           <div className="flex items-center gap-1.5 mb-5">
             {STEPS.map((_, i) => (
-              <div
-                key={i}
-                className={`h-1 rounded-full transition-all duration-300 ${
-                  i === step ? 'w-6 bg-coral' : i < step ? 'w-3 bg-coral/40' : 'w-3 bg-white/20'
-                }`}
-              />
+              <div key={i} className={`h-1 rounded-full transition-all duration-300 ${
+                i === step ? 'w-6 bg-coral' : i < step ? 'w-3 bg-coral/40' : 'w-3 bg-white/20'
+              }`} />
             ))}
           </div>
           <p className="text-[9px] font-black uppercase tracking-widest text-coral mb-1">
             Step {step + 1} of {STEPS.length} — {STEPS[step]}
           </p>
-          <h2 className="text-xl font-black text-white uppercase leading-tight">
-            {headings[step].title}
-          </h2>
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-            {headings[step].sub}
-          </p>
+          <h2 className="text-xl font-black text-white uppercase leading-tight">{headings[step].title}</h2>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">{headings[step].sub}</p>
         </div>
 
         {/* Step content */}
@@ -220,69 +254,50 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
 
               {/* Country */}
               <div>
-                <label className="block text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                  Country
-                </label>
-                {loadingCountries ? (
-                  <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                    <Loader2 size={14} className="animate-spin text-gray-400" />
-                    <span className="text-sm text-gray-400 font-bold">Loading countries...</span>
+                <label className="block text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Country</label>
+                <SelectField
+                  value={countrySelected}
+                  onChange={v => { setCountrySelected(v); setCitySelected(''); setCityCustom(''); }}
+                  options={COUNTRIES}
+                  placeholder="Select a country..."
+                />
+                {countrySelected === 'Other' && (
+                  <div className="mt-2">
+                    <TextField
+                      value={countryCustom}
+                      onChange={setCountryCustom}
+                      placeholder="Type your country..."
+                    />
                   </div>
-                ) : (
-                  <select
-                    value={profile.country}
-                    onChange={e => setProfile(p => ({ ...p, country: e.target.value, city: '' }))}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors appearance-none cursor-pointer"
-                  >
-                    <option value="">Select a country...</option>
-                    {countries.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
                 )}
               </div>
 
-              {/* City — shown once country is picked */}
-              {profile.country && (
+              {/* City — only shown once a real country is chosen */}
+              {countrySelected && countrySelected !== 'Other' && (
                 <div>
                   <label className="block text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">
                     City <span className="text-gray-300 normal-case tracking-normal font-bold">(optional)</span>
                   </label>
-
-                  {cities.length > 0 ? (
+                  {cityOptions.length > 0 ? (
                     <>
-                      <select
-                        value={profile.city}
-                        onChange={e => setProfile(p => ({ ...p, city: e.target.value }))}
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors appearance-none cursor-pointer"
-                      >
-                        <option value="">Select a city...</option>
-                        {cities.map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-
-                      {/* Free-text input when "Other" city is selected */}
-                      {profile.city === 'Other' && (
-                        <input
-                          type="text"
-                          autoFocus
-                          placeholder="Type your city..."
-                          onChange={e => setProfile(p => ({ ...p, city: e.target.value || 'Other' }))}
-                          className="mt-3 w-full px-4 py-3 bg-gray-50 border-2 border-coral rounded-xl text-sm font-bold text-gray-900 focus:outline-none placeholder:font-normal placeholder:text-gray-400"
-                        />
+                      <SelectField
+                        value={citySelected}
+                        onChange={setCitySelected}
+                        options={cityOptions}
+                        placeholder="Select a city..."
+                      />
+                      {citySelected === 'Other' && (
+                        <div className="mt-2">
+                          <TextField
+                            value={cityCustom}
+                            onChange={setCityCustom}
+                            placeholder="Type your city..."
+                          />
+                        </div>
                       )}
                     </>
                   ) : (
-                    // No city data for this country — free text fallback
-                    <input
-                      type="text"
-                      autoFocus
-                      value={profile.city}
-                      onChange={e => setProfile(p => ({ ...p, city: e.target.value }))}
-                      placeholder="Type your city..."
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors placeholder:font-normal placeholder:text-gray-400"
-                    />
+                    <TextField value={citySelected} onChange={setCitySelected} placeholder="Type your city..." />
                   )}
                 </div>
               )}
@@ -291,29 +306,17 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
 
           {/* Step 2 — School type */}
           {step === 1 && (
-            <MultiChipGrid
-              options={SCHOOL_TYPES}
-              selected={profile.schoolType}
-              onToggle={v => toggle('schoolType', v)}
-            />
+            <MultiChipGrid options={SCHOOL_TYPES} selected={profile.schoolType} onToggle={v => toggle('schoolType', v)} />
           )}
 
           {/* Step 3 — Age range */}
           {step === 2 && (
-            <MultiChipGrid
-              options={AGE_RANGES}
-              selected={profile.ageRange}
-              onToggle={v => toggle('ageRange', v)}
-            />
+            <MultiChipGrid options={AGE_RANGES} selected={profile.ageRange} onToggle={v => toggle('ageRange', v)} />
           )}
 
           {/* Step 4 — Class size */}
           {step === 3 && (
-            <MultiChipGrid
-              options={CLASS_SIZES}
-              selected={profile.classSize}
-              onToggle={v => toggle('classSize', v)}
-            />
+            <MultiChipGrid options={CLASS_SIZES} selected={profile.classSize} onToggle={v => toggle('classSize', v)} />
           )}
 
           {/* Actions */}
@@ -329,14 +332,12 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
               ) : (
                 <button
                   onClick={handleSkip}
-                  disabled={saving}
                   className="text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-gray-500 transition-colors"
                 >
                   Skip for now
                 </button>
               )}
             </div>
-
             <button
               onClick={handleNext}
               disabled={!canAdvance() || saving}
