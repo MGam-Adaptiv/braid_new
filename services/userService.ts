@@ -65,8 +65,8 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
         photoURL: data.photoURL || '',
         avatarColor: data.avatarColor || '#EF3D5A',
         role: data.role || 'user',
-        status: ['teacher@test.com', 'admin@braidstudio.com'].includes(data.email) 
-          ? 'approved' 
+        status: ['teacher@test.com', 'admin@braidstudio.com'].includes(data.email) && data.status !== 'pending_deletion'
+          ? 'approved'
           : (data.status || 'pending'),
         totalTokensUsed: data.totalTokensUsed || 0,
         totalCostUsed: data.totalCostUsed || 0,
@@ -245,9 +245,10 @@ export const checkUsageLimit = async (userId: string, email?: string | null): Pr
 
 export interface TeacherProfile {
   country: string;
-  schoolType: string;
-  ageRange: string;
-  classSize: string;
+  city: string;
+  schoolType: string[];
+  ageRange: string[];
+  classSize: string[];
   completedAt?: any;
   skipped?: boolean;
 }
