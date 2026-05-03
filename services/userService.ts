@@ -243,6 +243,30 @@ export const checkUsageLimit = async (userId: string, email?: string | null): Pr
   }
 };
 
+export interface TeacherProfile {
+  country: string;
+  schoolType: string;
+  ageRange: string;
+  classSize: string;
+  completedAt?: any;
+  skipped?: boolean;
+}
+
+export const saveTeacherProfile = async (userId: string, profile: TeacherProfile): Promise<void> => {
+  if (!userId) return;
+  try {
+    await db.collection('users').doc(userId).update({
+      profile: {
+        ...profile,
+        completedAt: serverTimestamp(),
+      },
+    });
+  } catch (error) {
+    console.error('userService: Error saving teacher profile:', error);
+    throw error;
+  }
+};
+
 export const addCustomPublisher = async (userId: string, publisher: string): Promise<void> => {
   if (!userId || !publisher) return;
   try {
