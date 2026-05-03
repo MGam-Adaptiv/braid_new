@@ -85,28 +85,33 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
     classSize: [],
   });
 
-  // API state
+  // API state — one fetch gets countries + cities together
+  const [countryMap, setCountryMap] = useState<Record<string, string[]>>({});
   const [countries, setCountries] = useState<string[]>([]);
-  const [cities, setCities] = useState<string[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(true);
-  const [loadingCities, setLoadingCities] = useState(false);
-  const [cityFetchFailed, setCityFetchFailed] = useState(false);
 
   const firstName = userName?.split(' ')[0] || 'there';
 
-  // Fetch countries on mount
+  // Single fetch on mount — countries endpoint includes city arrays
   useEffect(() => {
     fetch('https://countriesnow.space/api/v0.1/countries')
       .then(r => r.json())
       .then(data => {
-        const names: string[] = data.data
-          .map((c: any) => c.country)
-          .filter(Boolean)
-          .sort();
+        const map: Record<string, string[]> = {};
+        const names: string[] = [];
+        for (const entry of data.data) {
+          if (!entry.country) continue;
+          names.push(entry.country);
+          const sorted = [...(entry.cities ?? [])].sort();
+          if (sorted.length) sorted.push('Other');
+          map[entry.country] = sorted;
+        }
+        names.sort();
         setCountries(names);
+        setCountryMap(map);
       })
       .catch(() => {
-        // Fallback: minimal list so the flow isn't blocked
+        // Fallback country list if API is unreachable
         setCountries([
           'Argentina', 'Australia', 'Brazil', 'Canada', 'China', 'Colombia',
           'Egypt', 'France', 'Germany', 'Greece', 'Indonesia', 'Italy',
@@ -119,31 +124,8 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
       .finally(() => setLoadingCountries(false));
   }, []);
 
-  // Fetch cities when country changes
-  useEffect(() => {
-    if (!profile.country) { setCities([]); return; }
-    setCityFetchFailed(false);
-    setLoadingCities(true);
-    setCities([]);
-    setProfile(p => ({ ...p, city: '' }));
-
-    fetch('https://countriesnow.space/api/v0.1/countries/cities', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ country: profile.country }),
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (data.error || !data.data?.length) {
-          setCityFetchFailed(true);
-        } else {
-          const sorted: string[] = [...data.data].sort();
-          setCities([...sorted, 'Other']);
-        }
-      })
-      .catch(() => setCityFetchFailed(true))
-      .finally(() => setLoadingCities(false));
-  }, [profile.country]);
+  // Derive city list from map whenever country changes
+  const cities = profile.country ? (countryMap[profile.country] ?? []) : [];
 
   const toggle = (field: 'schoolType' | 'ageRange' | 'classSize', value: string) => {
     setProfile(p => {
@@ -158,7 +140,7 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
   };
 
   const canAdvance = () => {
-    if (step === 0) return profile.country !== '' && !loadingCities;
+    if (step === 0) return profile.country !== '' && !loadingCountries;
     if (step === 1) return profile.schoolType.length > 0;
     if (step === 2) return profile.ageRange.length > 0;
     if (step === 3) return profile.classSize.length > 0;
@@ -267,22 +249,7 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
                     City <span className="text-gray-300 normal-case tracking-normal font-bold">(optional)</span>
                   </label>
 
-                  {loadingCities ? (
-                    <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      <Loader2 size={14} className="animate-spin text-gray-400" />
-                      <span className="text-sm text-gray-400 font-bold">Loading cities...</span>
-                    </div>
-                  ) : cityFetchFailed ? (
-                    // API couldn't find cities — fall back to free text
-                    <input
-                      type="text"
-                      autoFocus
-                      value={profile.city}
-                      onChange={e => setProfile(p => ({ ...p, city: e.target.value }))}
-                      placeholder="Type your city..."
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors placeholder:font-normal placeholder:text-gray-400"
-                    />
-                  ) : (
+                  {cities.length > 0 ? (
                     <>
                       <select
                         value={profile.city}
@@ -306,6 +273,16 @@ export const OnboardingFlow: React.FC<Props> = ({ userId, userName, onComplete }
                         />
                       )}
                     </>
+                  ) : (
+                    // No city data for this country — free text fallback
+                    <input
+                      type="text"
+                      autoFocus
+                      value={profile.city}
+                      onChange={e => setProfile(p => ({ ...p, city: e.target.value }))}
+                      placeholder="Type your city..."
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-coral transition-colors placeholder:font-normal placeholder:text-gray-400"
+                    />
                   )}
                 </div>
               )}
