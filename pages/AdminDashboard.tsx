@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import firebase from 'firebase/compat/app';
 import { db } from '../lib/firebase';
 import { getAllUsers, approveUserAccess } from '../services/userService';
+import { cancelDeletionRequest } from '../services/adminService';
 import UserDetailPanel from './admin/UserDetailPanel';
 import {
   Users, Activity, AlertTriangle, CheckCircle, RefreshCw,
@@ -834,7 +835,8 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const pendingUsers = users.filter(u => u.status === 'pending');
+  const pendingUsers   = users.filter(u => u.status === 'pending');
+  const deletionUsers  = users.filter(u => u.status === 'pending_deletion');
 
   const handleApprove = async (uid: string) => {
     await approveUserAccess(uid);
@@ -879,9 +881,9 @@ export const AdminDashboard: React.FC = () => {
             }`}
           >
             <UserPlus className="w-4 h-4" /> APPROVALS
-            {stats.pending > 0 && (
+            {(stats.pending + deletionUsers.length) > 0 && (
               <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white animate-pulse">
-                {stats.pending}
+                {stats.pending + deletionUsers.length}
               </span>
             )}
           </button>
@@ -2706,43 +2708,100 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* 3. APPROVALS TAB (Pending Users) */}
+      {/* 3. APPROVALS TAB (Pending Users + Deletion Requests) */}
       {activeTab === 'approvals' && (
         <div className="space-y-6 animate-in fade-in duration-500">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+
+          {/* Pending access approvals */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            <h3 className="text-lg font-bold text-gray-900 mb-1">Access Approvals</h3>
+            <p className="text-xs text-gray-400 font-medium mb-6">New teachers waiting to be approved</p>
             {pendingUsers.length === 0 ? (
-              <div className="py-12">
-                <CheckCircle className="w-16 h-16 text-green-100 mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-gray-900">All Caught Up!</h3>
-                <p className="text-gray-500">There are no users waiting for approval.</p>
+              <div className="py-8 text-center">
+                <CheckCircle className="w-12 h-12 text-green-100 mx-auto mb-3" />
+                <p className="text-gray-400 text-sm font-medium">No pending approvals</p>
               </div>
             ) : (
-              <div className="max-w-2xl mx-auto space-y-4">
-                <h3 className="text-lg font-bold text-gray-900 text-left mb-4">Pending Requests ({pendingUsers.length})</h3>
+              <div className="space-y-3">
                 {pendingUsers.map(user => (
-                   <div key={user.uid} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl bg-yellow-50/50 hover:bg-yellow-50 transition">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-yellow-100 text-yellow-700 flex items-center justify-center font-bold">
-                          {user.displayName?.[0]}
-                        </div>
-                        <div className="text-left">
-                          <div className="font-bold text-gray-900">{user.displayName}</div>
-                          <div className="text-sm text-gray-500">{user.email}</div>
-                        </div>
+                  <div key={user.uid} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl bg-yellow-50/50 hover:bg-yellow-50 transition">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-yellow-100 text-yellow-700 flex items-center justify-center font-bold text-sm">
+                        {user.displayName?.[0]}
                       </div>
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => handleApprove(user.uid)}
-                          className="px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition shadow-sm"
-                        >
-                          Approve Access
-                        </button>
+                      <div>
+                        <div className="font-bold text-gray-900">{user.displayName}</div>
+                        <div className="text-sm text-gray-500">{user.email}</div>
                       </div>
-                   </div>
+                    </div>
+                    <button
+                      onClick={() => handleApprove(user.uid)}
+                      className="px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition shadow-sm"
+                    >
+                      Approve Access
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
           </div>
+
+          {/* Pending deletion requests */}
+          <div className="bg-white rounded-xl shadow-sm border border-red-100 p-8">
+            <div className="flex items-center gap-3 mb-1">
+              <h3 className="text-lg font-bold text-gray-900">Deletion Requests</h3>
+              {deletionUsers.length > 0 && (
+                <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-black rounded-full uppercase tracking-widest">
+                  {deletionUsers.length}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 font-medium mb-6">Teachers who requested account deletion — 30-day grace period active</p>
+            {deletionUsers.length === 0 ? (
+              <div className="py-8 text-center">
+                <CheckCircle className="w-12 h-12 text-green-100 mx-auto mb-3" />
+                <p className="text-gray-400 text-sm font-medium">No deletion requests</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {deletionUsers.map(u => {
+                  const requestedAt = u.deletionRequestedAt?.toDate ? u.deletionRequestedAt.toDate() : null;
+                  const expiresAt   = requestedAt ? new Date(requestedAt.getTime() + 30 * 24 * 60 * 60 * 1000) : null;
+                  const daysLeft    = expiresAt ? Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : null;
+                  return (
+                    <div key={u.uid} className="flex items-center justify-between p-4 border border-red-100 rounded-xl bg-red-50/40">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center font-bold text-sm">
+                          {u.displayName?.[0] || '?'}
+                        </div>
+                        <div>
+                          <div className="font-bold text-gray-900">{u.displayName || 'Unknown'}</div>
+                          <div className="text-sm text-gray-500">{u.email}</div>
+                          <div className="text-[11px] font-bold text-red-400 mt-0.5">
+                            {requestedAt
+                              ? `Requested ${requestedAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                              : 'Deletion requested'}
+                            {daysLeft !== null && ` · ${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining`}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          await cancelDeletionRequest(u.uid);
+                          toast.success(`${u.displayName}'s account restored`);
+                          fetchData();
+                        }}
+                        className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-black uppercase tracking-widest rounded-lg hover:border-coral hover:text-coral transition"
+                      >
+                        Cancel Deletion
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
         </div>
       )}
 
