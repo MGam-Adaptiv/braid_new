@@ -874,18 +874,25 @@ export const AdminDashboard: React.FC = () => {
             <Shield className="w-4 h-4" /> GOVERNANCE
           </button>
 
-          <button 
+          <button
             onClick={() => setActiveTab('approvals')}
             className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
               activeTab === 'approvals' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'
             }`}
           >
             <UserPlus className="w-4 h-4" /> APPROVALS
-            {(stats.pending + deletionUsers.length) > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white animate-pulse">
-                {stats.pending + deletionUsers.length}
-              </span>
-            )}
+            <span className="flex items-center gap-1 ml-1">
+              {stats.pending > 0 && (
+                <span className="flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-green-500 text-[9px] font-black text-white">
+                  {stats.pending}
+                </span>
+              )}
+              {deletionUsers.length > 0 && (
+                <span className="flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-red-500 text-[9px] font-black text-white animate-pulse">
+                  {deletionUsers.length}
+                </span>
+              )}
+            </span>
           </button>
 
           <button
