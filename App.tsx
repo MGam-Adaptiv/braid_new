@@ -46,15 +46,13 @@ const RootRedirect = () => {
       </div>
     );
   }
-  
-  // If not logged in, show the LandingPage (Root path handles this now)
+
   if (!user) return <LandingPage />;
 
-  // Intercept users scheduled for deletion
   if (userProfile?.status === 'pending_deletion') {
     return <Navigate to="/restore-account" replace />;
   }
-  
+
   return userProfile?.role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to="/app" replace />;
 };
 
@@ -75,88 +73,89 @@ const AppContent = () => {
 
   return (
     <>
-    <Router>
-      <Routes>
-        {/* PUBLIC ROUTES */}
-        <Route path="/" element={<RootRedirect />} />
-        <Route path="/test/:id" element={<TestPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignUpPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
+      <Router>
+        <Routes>
+          {/* PUBLIC ROUTES */}
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="/test/:id" element={<TestPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
 
-        {/* ACCOUNT RESTORATION - Intercept page */}
-        <Route path="/restore-account" element={<RestoreAccountPage />} />
+          {/* ACCOUNT RESTORATION */}
+          <Route path="/restore-account" element={<RestoreAccountPage />} />
 
-        {/* PROTECTED ROUTES - Wrapped in RoleGuard */}
-        <Route path="/app/*" element={
-          <RoleGuard allowedRoles={[UserRole.TEACHER, UserRole.SCHOOL_OWNER, UserRole.ADMIN]}>
-            <StudioProvider>
-              <AppLayout />
-            </StudioProvider>
-          </RoleGuard>
-        } />
-        
-        <Route path="/activities" element={
-          <RoleGuard allowedRoles={[UserRole.TEACHER, UserRole.SCHOOL_OWNER, UserRole.ADMIN]}>
-            <ActivitiesPage />
-          </RoleGuard>
-        } />
+          {/* PROTECTED ROUTES */}
+          <Route path="/app/*" element={
+            <RoleGuard allowedRoles={[UserRole.TEACHER, UserRole.SCHOOL_OWNER, UserRole.ADMIN]}>
+              <StudioProvider>
+                <AppLayout />
+              </StudioProvider>
+            </RoleGuard>
+          } />
 
-        <Route path="/materials" element={
-          <RoleGuard allowedRoles={[UserRole.TEACHER, UserRole.SCHOOL_OWNER, UserRole.ADMIN]}>
-            <MaterialsPage />
-          </RoleGuard>
-        } />
+          <Route path="/activities" element={
+            <RoleGuard allowedRoles={[UserRole.TEACHER, UserRole.SCHOOL_OWNER, UserRole.ADMIN]}>
+              <ActivitiesPage />
+            </RoleGuard>
+          } />
 
-        <Route path="/profile" element={
-          <RoleGuard allowedRoles={[UserRole.TEACHER, UserRole.SCHOOL_OWNER, UserRole.ADMIN]}>
-            <UserProfilePage />
-          </RoleGuard>
-        } />
+          <Route path="/materials" element={
+            <RoleGuard allowedRoles={[UserRole.TEACHER, UserRole.SCHOOL_OWNER, UserRole.ADMIN]}>
+              <MaterialsPage />
+            </RoleGuard>
+          } />
 
-        <Route path="/settings" element={
-          <RoleGuard allowedRoles={[UserRole.TEACHER, UserRole.SCHOOL_OWNER, UserRole.ADMIN]}>
-            <SettingsPage />
-          </RoleGuard>
-        } />
-        
-        <Route path="/admin" element={
-          <RoleGuard allowedRoles={[UserRole.ADMIN]}>
-            <AdminDashboard />
-          </RoleGuard>
-        } />
+          <Route path="/profile" element={
+            <RoleGuard allowedRoles={[UserRole.TEACHER, UserRole.SCHOOL_OWNER, UserRole.ADMIN]}>
+              <UserProfilePage />
+            </RoleGuard>
+          } />
 
-        <Route path="/workspace/:id/*" element={
-          <RoleGuard allowedRoles={[UserRole.TEACHER, UserRole.SCHOOL_OWNER, UserRole.ADMIN]}>
-            <StudioProvider>
-              <AppLayout />
-            </StudioProvider>
-          </RoleGuard>
-        } />
-        
-        {/* 404 */}
-        <Route path="*" element={
-          <div className="h-screen flex flex-col items-center justify-center p-20 text-center bg-gray-50">
-            <h1 className="text-4xl font-black text-gray-200 uppercase tracking-tighter mb-4">404</h1>
-            <p className="font-black uppercase tracking-widest text-gray-400 text-xs">Page not found</p>
-            <button 
-              onClick={() => window.location.href = '#/'}
-              className="mt-8 px-6 py-3 bg-white border border-gray-200 text-gray-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:border-coral hover:text-coral transition-all"
-            >
-              Go Home
-            </button>
-          </div>
-        } />
-      </Routes>
-    </Router>
-    {showOnboarding && user && (
-      <OnboardingFlow
-        userId={user.uid}
-        userName={user.displayName || user.email}
-        onComplete={() => setShowOnboarding(false)}
-      />
-    )}
+          <Route path="/settings" element={
+            <RoleGuard allowedRoles={[UserRole.TEACHER, UserRole.SCHOOL_OWNER, UserRole.ADMIN]}>
+              <SettingsPage />
+            </RoleGuard>
+          } />
+
+          <Route path="/admin" element={
+            <RoleGuard allowedRoles={[UserRole.ADMIN]}>
+              <AdminDashboard />
+            </RoleGuard>
+          } />
+
+          <Route path="/workspace/:id/*" element={
+            <RoleGuard allowedRoles={[UserRole.TEACHER, UserRole.SCHOOL_OWNER, UserRole.ADMIN]}>
+              <StudioProvider>
+                <AppLayout />
+              </StudioProvider>
+            </RoleGuard>
+          } />
+
+          {/* 404 */}
+          <Route path="*" element={
+            <div className="h-screen flex flex-col items-center justify-center p-20 text-center bg-gray-50">
+              <h1 className="text-4xl font-black text-gray-200 uppercase tracking-tighter mb-4">404</h1>
+              <p className="font-black uppercase tracking-widest text-gray-400 text-xs">Page not found</p>
+              <button
+                onClick={() => window.location.href = '#/'}
+                className="mt-8 px-6 py-3 bg-white border border-gray-200 text-gray-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:border-coral hover:text-coral transition-all"
+              >
+                Go Home
+              </button>
+            </div>
+          } />
+        </Routes>
+      </Router>
+
+      {showOnboarding && user && (
+        <OnboardingFlow
+          userId={user.uid}
+          userName={user.displayName || user.email}
+          onComplete={() => setShowOnboarding(false)}
+        />
+      )}
     </>
   );
 };
@@ -165,7 +164,7 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <AppContent />
-      <Toaster 
+      <Toaster
         position="top-center"
         toastOptions={{
           duration: 4000,
