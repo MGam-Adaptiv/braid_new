@@ -4,6 +4,7 @@ import firebase from 'firebase/compat/app';
 import { db } from '../lib/firebase';
 import { getAllUsers, approveUserAccess } from '../services/userService';
 import { cancelDeletionRequest } from '../services/adminService';
+import BookIntelligenceModal from '../components/admin/BookIntelligenceModal';
 import UserDetailPanel from './admin/UserDetailPanel';
 import {
   Users, Activity, AlertTriangle, CheckCircle, RefreshCw,
@@ -80,6 +81,9 @@ export const AdminDashboard: React.FC = () => {
   const [actionPlanLogsLoading, setActionPlanLogsLoading] = useState(false);
   const [compareA, setCompareA] = useState<any>(null);
   const [compareB, setCompareB] = useState<any>(null);
+
+  // Book Intelligence Modal
+  const [bookIntelBook, setBookIntelBook] = useState<{ title: string; publisher: string } | null>(null);
 
   // Pool Tab State
   const [poolBooksData, setPoolBooksData]   = useState<BookInsightDisplay[]>([]);
@@ -1186,11 +1190,11 @@ export const AdminDashboard: React.FC = () => {
                             <th className="px-8 py-4">Activities Braided</th>
                             <th className="px-8 py-4">Top Activity Type</th>
                             <th className="px-8 py-4">Top CEFR Level</th>
+                            <th className="px-8 py-4"></th>
                           </tr>
                         </thead>
                         <tbody>
-                          {bookData
-                            .map((book, index) => (
+                          {bookData.map((book, index) => (
                             <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                               <td className="px-8 py-4 font-bold text-gray-900">{book.title}</td>
                               <td className="px-8 py-4 text-gray-500">{book.publisher}</td>
@@ -1198,6 +1202,14 @@ export const AdminDashboard: React.FC = () => {
                               <td className="px-8 py-4 text-gray-500 capitalize">{book.topType}</td>
                               <td className="px-8 py-4 text-gray-500">
                                 <span className="px-2 py-1 bg-gray-100 rounded text-xs font-bold text-gray-600">{book.topCefr}</span>
+                              </td>
+                              <td className="px-8 py-4">
+                                <button
+                                  onClick={() => setBookIntelBook({ title: book.title, publisher: book.publisher })}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-coral transition-colors"
+                                >
+                                  <Brain size={11} /> Deep Dive
+                                </button>
                               </td>
                             </tr>
                           ))}
@@ -3139,6 +3151,18 @@ export const AdminDashboard: React.FC = () => {
             </>
           )}
         </div>
+      )}
+
+      {/* BOOK INTELLIGENCE MODAL */}
+      {bookIntelBook && (
+        <BookIntelligenceModal
+          bookTitle={bookIntelBook.title}
+          publisher={bookIntelBook.publisher}
+          allActivities={allActivities}
+          allMaterials={allMaterials}
+          users={users}
+          onClose={() => setBookIntelBook(null)}
+        />
       )}
 
       {/* SLIDE-OVER PANEL */}
