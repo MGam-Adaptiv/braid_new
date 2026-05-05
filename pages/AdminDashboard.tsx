@@ -2335,6 +2335,177 @@ export const AdminDashboard: React.FC = () => {
                   )}
                 </div>
 
+                {/* TEACHER DEMOGRAPHICS */}
+                {(() => {
+                  const SCHOOL_LABELS: Record<string, string> = {
+                    language_school: 'Language School',
+                    state_school:    'State School',
+                    university:      'University',
+                    private_tutor:   'Private Tutor',
+                  };
+                  const AGE_LABELS: Record<string, string> = {
+                    young_learners: 'Young Learners',
+                    teens:          'Teens',
+                    adults:         'Adults',
+                    mixed:          'Mixed Ages',
+                  };
+                  const SIZE_LABELS: Record<string, string> = {
+                    one_to_one: '1-to-1',
+                    small:      'Small (2–8)',
+                    group:      'Group (9–20)',
+                    large:      'Large (20+)',
+                  };
+                  const SCHOOL_EMOJI: Record<string, string> = { language_school: '🏫', state_school: '🏛️', university: '🎓', private_tutor: '👤' };
+                  const AGE_EMOJI:    Record<string, string> = { young_learners: '🧒', teens: '🧑', adults: '👨‍💼', mixed: '👥' };
+                  const SIZE_EMOJI:   Record<string, string> = { one_to_one: '🤝', small: '👫', group: '👨‍👩‍👧‍👦', large: '🏟️' };
+
+                  // Only include teachers who completed onboarding
+                  const profiled = users.filter(u => (u as any).profile && u.role !== 'admin');
+                  const total    = profiled.length;
+
+                  if (total === 0) return null;
+
+                  // Country counts
+                  const countryCounts: Record<string, number> = {};
+                  profiled.forEach(u => {
+                    const c = (u as any).profile?.country;
+                    if (c) countryCounts[c] = (countryCounts[c] || 0) + 1;
+                  });
+                  const topCountries = Object.entries(countryCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 10);
+                  const maxCountry = topCountries[0]?.[1] || 1;
+
+                  // Multi-select aggregators
+                  const schoolCounts: Record<string, number> = {};
+                  const ageCounts:    Record<string, number> = {};
+                  const sizeCounts:   Record<string, number> = {};
+                  profiled.forEach(u => {
+                    const p = (u as any).profile;
+                    (p?.schoolType || []).forEach((v: string) => { schoolCounts[v] = (schoolCounts[v] || 0) + 1; });
+                    (p?.ageRange   || []).forEach((v: string) => { ageCounts[v]    = (ageCounts[v]    || 0) + 1; });
+                    (p?.classSize  || []).forEach((v: string) => { sizeCounts[v]   = (sizeCounts[v]   || 0) + 1; });
+                  });
+                  const maxSchool = Math.max(...Object.values(schoolCounts), 1);
+                  const maxAge    = Math.max(...Object.values(ageCounts), 1);
+                  const maxSize   = Math.max(...Object.values(sizeCounts), 1);
+
+                  const ChipBar = ({
+                    keys, labels, emojis, counts, maxVal, color,
+                  }: {
+                    keys: string[]; labels: Record<string, string>; emojis: Record<string, string>;
+                    counts: Record<string, number>; maxVal: number; color: string;
+                  }) => (
+                    <div className="grid grid-cols-2 gap-3">
+                      {keys.map(k => {
+                        const n   = counts[k] || 0;
+                        const pct = total > 0 ? Math.round((n / total) * 100) : 0;
+                        const bar = maxVal > 0 ? (n / maxVal) * 100 : 0;
+                        return (
+                          <div key={k} className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">{emojis[k]}</span>
+                                <span className="text-xs font-black text-gray-700 uppercase tracking-tight">{labels[k]}</span>
+                              </div>
+                              <span className="text-sm font-black text-gray-900">{n}</span>
+                            </div>
+                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${bar}%`, backgroundColor: color }} />
+                            </div>
+                            <div className="text-[10px] font-bold text-gray-400 mt-1">{pct}% of teachers</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+
+                  return (
+                    <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 mt-8">
+                      <div className="flex items-center justify-between mb-8">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">Teacher Demographics</h3>
+                          <p className="text-xs text-gray-400 font-medium mt-1">
+                            Based on {total} teacher{total !== 1 ? 's' : ''} who completed onboarding
+                          </p>
+                        </div>
+                        <div className="px-4 py-2 bg-coral/10 rounded-xl">
+                          <span className="text-2xl font-black text-coral">{total}</span>
+                          <span className="text-[10px] font-black text-coral/70 uppercase tracking-widest ml-1">Profiled</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                        {/* ── Country Distribution ─────────────────────── */}
+                        <div className="lg:col-span-2">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">📍 Top Countries</p>
+                          <div className="space-y-2">
+                            {topCountries.map(([country, count]) => {
+                              const pct = Math.round((count / total) * 100);
+                              const bar = (count / maxCountry) * 100;
+                              return (
+                                <div key={country} className="flex items-center gap-3">
+                                  <div className="w-32 text-xs font-bold text-gray-700 truncate flex-shrink-0">{country}</div>
+                                  <div className="flex-1 h-6 bg-gray-100 rounded-lg overflow-hidden">
+                                    <div
+                                      className="h-full rounded-lg flex items-center px-2 transition-all duration-500"
+                                      style={{ width: `${bar}%`, backgroundColor: '#EF3D5A', minWidth: '24px' }}
+                                    >
+                                      <span className="text-[10px] font-black text-white whitespace-nowrap">{count}</span>
+                                    </div>
+                                  </div>
+                                  <div className="w-10 text-right text-[10px] font-bold text-gray-400 flex-shrink-0">{pct}%</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* ── School Type ──────────────────────────────── */}
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">🏫 Where They Work</p>
+                          <ChipBar
+                            keys={['language_school', 'state_school', 'university', 'private_tutor']}
+                            labels={SCHOOL_LABELS} emojis={SCHOOL_EMOJI}
+                            counts={schoolCounts} maxVal={maxSchool} color="#6366f1"
+                          />
+                        </div>
+
+                        {/* ── Age Range ────────────────────────────────── */}
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">👥 Who They Teach</p>
+                          <ChipBar
+                            keys={['young_learners', 'teens', 'adults', 'mixed']}
+                            labels={AGE_LABELS} emojis={AGE_EMOJI}
+                            counts={ageCounts} maxVal={maxAge} color="#10b981"
+                          />
+                        </div>
+
+                        {/* ── Class Size ───────────────────────────────── */}
+                        <div className="lg:col-span-2">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">📐 Class Sizes</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {(['one_to_one', 'small', 'group', 'large'] as const).map(k => {
+                              const n   = sizeCounts[k] || 0;
+                              const pct = total > 0 ? Math.round((n / total) * 100) : 0;
+                              return (
+                                <div key={k} className="p-4 bg-gray-50 rounded-xl border border-gray-100 text-center">
+                                  <div className="text-3xl mb-2">{SIZE_EMOJI[k]}</div>
+                                  <div className="text-xl font-black text-gray-900">{n}</div>
+                                  <div className="text-[10px] font-black text-gray-500 uppercase tracking-tight mt-0.5">{SIZE_LABELS[k]}</div>
+                                  <div className="text-[10px] font-bold text-gray-400 mt-1">{pct}%</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  );
+                })()}
+
               </>
             )}
           </div>
