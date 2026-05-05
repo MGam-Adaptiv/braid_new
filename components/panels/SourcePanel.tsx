@@ -196,7 +196,7 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
   const finalizeAnalysis = async () => {
     // Only update local session state, do NOT auto-save to DB
     const finalPublisher = formPublisher === 'Other...' ? customPublisher : formPublisher;
-    const combinedData = { vocabulary: coreVocab, secondaryVocabulary: secondaryVocab, grammar: coreGrammar, topic: editedTopic, level: selectedLevel, ocrTexts: pages.map(p => p.analysis?.readingText?.content || ''), pageCount: pages.length, allTags: { publisher: finalPublisher, bookTitle: formBookTitle, unitTags: pages.flatMap(p => p.unitTags), labelTags: pages.flatMap(p => p.labelTags), pages: [] } };
+    const combinedData = { vocabulary: coreVocab, secondaryVocabulary: secondaryVocab, grammar: coreGrammar, topic: editedTopic, level: selectedLevel, ocrTexts: pages.map(p => p.analysis?.readingText?.content || ''), pageCount: pages.length, allTags: { publisher: finalPublisher, bookTitle: formBookTitle, unitTags: pages.flatMap(p => p.unitTags), labelTags: pages.flatMap(p => p.labelTags), pages: pages.map(p => ({ unitPage: p.unitTags[0] || null, pageLabel: p.labelTags[0] || null, unitTags: p.unitTags || [], labelTags: p.labelTags || [] })) } };
     setCombinedExtraction(combinedData);
     addSource({ id: `c-${Date.now()}`, title: formBookTitle || 'Source', type: 'multi-page', content: JSON.stringify(combinedData), createdAt: Date.now() });
     setStage('READY'); setWorkflowStage('drafting');
