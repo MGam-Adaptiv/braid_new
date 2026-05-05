@@ -556,13 +556,21 @@ export const WorkbenchPanel: React.FC = () => {
         activityCategory: item.activityCategory || item.category || null,
         activityFormat: item.activityFormat || null,
 
-        // PRESERVE source information
-        source: item.source || {
-          publisher: combinedExtraction?.allTags?.publisher || '',
-          bookTitle: combinedExtraction?.allTags?.bookTitle || '',
-          pages: [],
-          pageCount: combinedExtraction?.pageCount || 0,
-        },
+        // PRESERVE source information — always populate pages from fresh extraction if available
+        source: (() => {
+          const existing = item.source || {};
+          const extractedPages = (combinedExtraction?.allTags?.pages || [])
+            .map((p: any) => ({ unitTags: p.unitTags || [], labelTags: p.labelTags || [] }));
+          return {
+            publisher:   existing.publisher   || combinedExtraction?.allTags?.publisher || '',
+            bookTitle:   existing.bookTitle   || combinedExtraction?.allTags?.bookTitle || '',
+            pageCount:   existing.pageCount   || combinedExtraction?.pageCount          || 0,
+            ...(existing.originalLength != null ? { originalLength: existing.originalLength } : {}),
+            ...(existing.difficultyDelta != null ? { difficultyDelta: existing.difficultyDelta } : {}),
+            // Use freshly extracted per-page unit tags when available; otherwise keep what's already saved
+            pages: extractedPages.length > 0 ? extractedPages : (existing.pages || []),
+          };
+        })(),
 
         interactiveData,
 
