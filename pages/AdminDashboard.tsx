@@ -761,6 +761,43 @@ export const AdminDashboard: React.FC = () => {
         .map(([key, count]) => ({ key, label: ENHANCE_LABEL[key] || key, count }))
         .sort((a, b) => b.count - a.count);
 
+      // ── Per-book demographics — join activities → user profiles ──────────
+      const bookLimit = selectedPublisher === 'All Publishers' ? 5 : 8;
+      const bookDemographics = supplementationData.slice(0, bookLimit).map(b => {
+        const bookActs    = allActivities.filter((a: any) => a.source?.bookTitle === b.book);
+        const teacherUids = [...new Set(bookActs.map((a: any) => a.userId).filter(Boolean))] as string[];
+        const profiled    = teacherUids
+          .map(uid => users.find(u => u.uid === uid))
+          .filter(u => u && (u as any).profile);
+
+        const countryCounts: Record<string, number> = {};
+        const schoolCounts:  Record<string, number> = {};
+        const ageCounts:     Record<string, number> = {};
+        const sizeCounts:    Record<string, number> = {};
+
+        const SCHOOL_LABEL: Record<string, string> = { language_school: 'Language School', state_school: 'State School', university: 'University', private_tutor: 'Private Tutor' };
+        const AGE_LABEL:    Record<string, string> = { young_learners: 'Young Learners', teens: 'Teens', adults: 'Adults', mixed: 'Mixed' };
+        const SIZE_LABEL:   Record<string, string> = { one_to_one: '1-to-1', small: 'Small', group: 'Group', large: 'Large' };
+
+        profiled.forEach(u => {
+          const p = (u as any).profile;
+          if (p.country) countryCounts[p.country] = (countryCounts[p.country] || 0) + 1;
+          (p.schoolType || []).forEach((v: string) => { schoolCounts[v] = (schoolCounts[v] || 0) + 1; });
+          (p.ageRange   || []).forEach((v: string) => { ageCounts[v]    = (ageCounts[v]    || 0) + 1; });
+          (p.classSize  || []).forEach((v: string) => { sizeCounts[v]   = (sizeCounts[v]   || 0) + 1; });
+        });
+
+        return {
+          book:             b.book,
+          publisher:        b.publisher,
+          profiledTeachers: profiled.length,
+          topCountries:     Object.entries(countryCounts).sort((a,b) => b[1]-a[1]).slice(0, 3).map(([c, n]) => `${c} (${n})`),
+          schoolTypes:      Object.entries(schoolCounts).sort((a,b)  => b[1]-a[1]).map(([k, n]) => `${SCHOOL_LABEL[k]||k} (${n})`),
+          ageRanges:        Object.entries(ageCounts).sort((a,b)     => b[1]-a[1]).map(([k, n]) => `${AGE_LABEL[k]||k} (${n})`),
+          classSizes:       Object.entries(sizeCounts).sort((a,b)    => b[1]-a[1]).map(([k, n]) => `${SIZE_LABEL[k]||k} (${n})`),
+        };
+      });
+
       const payload = {
         selectedPublisher,
         timeRange,
@@ -772,6 +809,7 @@ export const AdminDashboard: React.FC = () => {
         contentLongevity: contentLongevityData,
         digitalReadiness: digitalReadinessData,
         adaptationSummary,
+        bookDemographics,
       };
 
       const actionPlanToken = await firebase.auth().currentUser?.getIdToken();
