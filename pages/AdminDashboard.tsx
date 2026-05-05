@@ -245,6 +245,13 @@ export const AdminDashboard: React.FC = () => {
     };
 
     fetchPoolData();
+
+    // Also fetch activities for demographics if Intelligence tab hasn't loaded them yet
+    if (allActivities.length === 0) {
+      db.collection('activities').get().then(snap => {
+        setAllActivities(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }).catch(() => {});
+    }
   }, [activeTab]);
 
   // Filter and Process Data Effect
@@ -3068,8 +3075,40 @@ export const AdminDashboard: React.FC = () => {
                   <div className="space-y-4">
                     {filtered.map(book => {
                       const cefrLevels = Object.entries(book.cefrCalibration);
+
+                      // ── Per-book demographics from activities + users ──────
+                      const bookActs     = allActivities.filter(a => a.source?.bookTitle === book.bookTitle);
+                      const teacherUids  = [...new Set(bookActs.map((a: any) => a.userId).filter(Boolean))] as string[];
+                      const profiled     = teacherUids
+                        .map(uid => users.find(u => u.uid === uid))
+                        .filter(u => u && (u as any).profile);
+                      const profiledCount = profiled.length;
+
+                      const countryCounts: Record<string, number> = {};
+                      const schoolCounts:  Record<string, number> = {};
+                      const ageCounts:     Record<string, number> = {};
+                      const sizeCounts:    Record<string, number> = {};
+
+                      profiled.forEach(u => {
+                        const p = (u as any).profile;
+                        if (p.country) countryCounts[p.country] = (countryCounts[p.country] || 0) + 1;
+                        (p.schoolType || []).forEach((v: string) => { schoolCounts[v] = (schoolCounts[v] || 0) + 1; });
+                        (p.ageRange   || []).forEach((v: string) => { ageCounts[v]    = (ageCounts[v]    || 0) + 1; });
+                        (p.classSize  || []).forEach((v: string) => { sizeCounts[v]   = (sizeCounts[v]   || 0) + 1; });
+                      });
+
+                      const topCountries = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+                      const SCHOOL_LABEL: Record<string, string> = { language_school:'Language School', state_school:'State School', university:'University', private_tutor:'Private Tutor' };
+                      const AGE_LABEL:    Record<string, string> = { young_learners:'Young Learners', teens:'Teens', adults:'Adults', mixed:'Mixed' };
+                      const SIZE_LABEL:   Record<string, string> = { one_to_one:'1-to-1', small:'Small', group:'Group', large:'Large' };
+                      const topSchool = Object.entries(schoolCounts).sort((a,b) => b[1]-a[1]);
+                      const topAge    = Object.entries(ageCounts).sort((a,b) => b[1]-a[1]);
+                      const topSize   = Object.entries(sizeCounts).sort((a,b) => b[1]-a[1]);
+
                       return (
                         <div key={book.bookTitle} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all duration-300">
+
+                          {/* ── Header row ──────────────────────────────── */}
                           <div className="flex items-start justify-between gap-4 mb-4">
                             <div>
                               <h4 className="text-base font-black text-gray-900 leading-tight">{book.bookTitle}</h4>
@@ -3089,8 +3128,8 @@ export const AdminDashboard: React.FC = () => {
                             </div>
                           </div>
 
+                          {/* ── Existing signals ────────────────────────── */}
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-100">
-                            {/* Top excluded items */}
                             <div>
                               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Top excluded items</p>
                               {book.excludedItems.length === 0 ? (
@@ -3105,8 +3144,6 @@ export const AdminDashboard: React.FC = () => {
                                 </div>
                               )}
                             </div>
-
-                            {/* Preferred activity types */}
                             <div>
                               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Preferred activity types</p>
                               {book.preferredActivityTypes.length === 0 ? (
@@ -3114,15 +3151,11 @@ export const AdminDashboard: React.FC = () => {
                               ) : (
                                 <div className="flex flex-wrap gap-1.5">
                                   {book.preferredActivityTypes.map(type => (
-                                    <span key={type} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-bold">
-                                      {type}
-                                    </span>
+                                    <span key={type} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-bold">{type}</span>
                                   ))}
                                 </div>
                               )}
                             </div>
-
-                            {/* CEFR calibration dots */}
                             <div>
                               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">CEFR calibration</p>
                               {cefrLevels.length === 0 ? (
@@ -3142,6 +3175,67 @@ export const AdminDashboard: React.FC = () => {
                               )}
                             </div>
                           </div>
+
+                          {/* ── Teacher Demographics ─────────────────────── */}
+                          {profiledCount > 0 && (
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+                                👥 Who Uses This Book — {profiledCount} profiled teacher{profiledCount !== 1 ? 's' : ''}
+                              </p>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+
+                                {/* Countries */}
+                                <div>
+                                  <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-1.5">📍 Where</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {topCountries.map(([country, count]) => (
+                                      <span key={country} className="px-2 py-0.5 bg-coral/10 text-coral rounded-md text-[10px] font-black">
+                                        {country} <span className="opacity-60">{count}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* School type */}
+                                <div>
+                                  <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-1.5">🏫 School Type</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {topSchool.map(([k, count]) => (
+                                      <span key={k} className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-[10px] font-black">
+                                        {SCHOOL_LABEL[k] || k} <span className="opacity-60">{count}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Age range */}
+                                <div>
+                                  <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-1.5">👥 Learners</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {topAge.map(([k, count]) => (
+                                      <span key={k} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-black">
+                                        {AGE_LABEL[k] || k} <span className="opacity-60">{count}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Class size */}
+                                <div>
+                                  <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-1.5">📐 Class Size</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {topSize.map(([k, count]) => (
+                                      <span key={k} className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded-md text-[10px] font-black">
+                                        {SIZE_LABEL[k] || k} <span className="opacity-60">{count}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+
+                              </div>
+                            </div>
+                          )}
+
                         </div>
                       );
                     })}
