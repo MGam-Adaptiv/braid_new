@@ -77,6 +77,7 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
         lastActive: data.lastActive || new Date().toISOString(),
         createdAt: data.createdAt || new Date().toISOString(),
         schoolLogoURL: data.schoolLogoURL || '',
+        profile: data.profile || null,
       } as UserProfile;
     });
     return users;
