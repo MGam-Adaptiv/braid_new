@@ -5,6 +5,7 @@ import { SourcePanel } from './panels/SourcePanel';
 import { WorkbenchPanel } from './panels/WorkbenchPanel';
 import { PartnerPanel } from './panels/PartnerPanel';
 import { useStudio } from '../context/StudioContext';
+import { Archive, ClipboardCheck, MessageSquare } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'source' | 'workbench' | 'partner'>('workbench');
@@ -119,31 +120,31 @@ export const AppLayout: React.FC = () => {
 
           <nav className="h-16 bg-white border-t border-gray-100 flex items-stretch shrink-0 pb-[env(safe-area-inset-bottom)]">
             {!isEditingDraft && (
-              <button 
+              <button
                 onClick={() => setActiveTab('source')}
                 className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all ${activeTab === 'source' ? 'text-coral' : 'text-gray-300'}`}
               >
                 <div className={`p-1.5 rounded-lg transition-colors ${activeTab === 'source' ? 'bg-coral/5' : ''}`}>
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                  <Archive className="w-5 h-5" />
                 </div>
                 <span className="text-[9px] font-black uppercase tracking-widest">Source</span>
               </button>
             )}
-            <button 
+            <button
               onClick={() => setActiveTab('workbench')}
               className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all ${activeTab === 'workbench' ? 'text-coral' : 'text-gray-300'}`}
             >
               <div className={`p-1.5 rounded-lg transition-colors ${activeTab === 'workbench' ? 'bg-coral/5' : ''}`}>
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                <ClipboardCheck className="w-5 h-5" />
               </div>
               <span className="text-[9px] font-black uppercase tracking-widest">Workbench</span>
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('partner')}
               className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all ${activeTab === 'partner' ? 'text-coral' : 'text-gray-300'}`}
             >
               <div className={`p-1.5 rounded-lg transition-colors ${activeTab === 'partner' ? 'bg-coral/5' : ''}`}>
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                <MessageSquare className="w-5 h-5" />
               </div>
               <span className="text-[9px] font-black uppercase tracking-widest">Partner</span>
             </button>

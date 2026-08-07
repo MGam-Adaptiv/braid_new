@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ACTIVITY_TYPES, WORD_BANK_TYPES } from '../constants/activityTypes';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 
 interface ActivityTypePickerProps {
   selected: string | null;
@@ -120,9 +120,7 @@ export const ActivityTypePicker: React.FC<ActivityTypePickerProps> = ({
                 </span>
                 {isSelected && (
                   <div className="w-3.5 h-3.5 rounded-full bg-coral flex items-center justify-center shrink-0 ml-1">
-                    <svg width="7" height="5" viewBox="0 0 7 5" fill="none">
-                      <path d="M1 2.5L2.8 4L6 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                    <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
                   </div>
                 )}
               </div>

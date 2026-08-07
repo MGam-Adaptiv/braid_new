@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Logo } from '../components/Logo';
 import { auth, db } from '../lib/firebase';
+import { ArrowLeft, LogIn, Eye, EyeOff, Check } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { loginWithGoogle, login, currentUser, resetPassword } = useAuth();
@@ -155,9 +156,7 @@ export const LoginPage: React.FC = () => {
           href="/landing.html"
           className="mt-4 inline-flex items-center gap-1.5 text-[11px] font-bold text-[#9CA3AF] hover:text-black transition-colors tracking-wide"
         >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
+          <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2.5} />
           Back to website
         </a>
       </div>
@@ -165,9 +164,7 @@ export const LoginPage: React.FC = () => {
       <div className="flex-1 sm:flex-none flex items-start sm:items-center justify-center px-0 sm:px-6 mb-12">
         <div className="w-full sm:max-w-[420px] bg-white sm:rounded-[24px] sm:shadow-xl p-6 sm:p-10 border-t border-b sm:border border-gray-100">
           <div className="flex items-center gap-2 mb-8">
-            <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
+            <LogIn className="w-4 h-4 text-black" strokeWidth={2.5} />
             <span className="text-[12px] font-black tracking-widest uppercase text-black">LOG IN TO STUDIO</span>
           </div>
 
@@ -211,12 +208,12 @@ export const LoginPage: React.FC = () => {
                   placeholder="••••••••"
                   className="w-full h-[54px] pl-5 pr-12 bg-white border border-[#E5E7EB] rounded-xl text-base focus:border-coral focus:ring-4 focus:ring-coral/5 outline-none transition-all"
                 />
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-black"
                 >
-                  {showPassword ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88L4.573 4.574m14.853 14.853L14.12 14.12M17.657 16.657L13.414 12.414m6.344-7.956L21.542 12c-1.274 4.057-5.064 7-9.542 7-1.127 0-2.203-.187-3.2-.533m12.443-12.243a9.954 9.954 0 00-3.2-.533M2.458 12C3.732 7.943 7.523 5 12 5c1.127 0 2.203.187 3.2.533m-12.742 6.467l5.307 5.307" /></svg>}
+                  {showPassword ? <Eye className="w-5 h-5" strokeWidth={2} /> : <EyeOff className="w-5 h-5" strokeWidth={2} />}
                 </button>
               </div>
               <div className="flex justify-end mt-1">
@@ -271,9 +268,7 @@ export const LoginPage: React.FC = () => {
             {resetSuccess ? (
               <div className="flex flex-col items-center text-center">
                 <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mb-4">
-                  <svg className="w-6 h-6 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
+                  <Check className="w-6 h-6 text-success" strokeWidth={2.5} />
                 </div>
                 <h3 className="text-sm text-[#374151] font-bold mb-2">Check your inbox</h3>
                 <p className="text-xs text-[#9CA3AF] mb-6">

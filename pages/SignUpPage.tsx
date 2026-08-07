@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Logo } from '../components/Logo';
-import { Check, AlertCircle } from 'lucide-react';
+import { Check, AlertCircle, ArrowLeft } from 'lucide-react';
 import { GoogleAuthButton } from '../components/GoogleAuthButton';
 
 export const SignUpPage: React.FC = () => {
@@ -108,9 +108,7 @@ export const SignUpPage: React.FC = () => {
           href="/landing.html"
           className="mt-4 inline-flex items-center gap-1.5 text-[11px] font-bold text-[#9CA3AF] hover:text-black transition-colors tracking-wide"
         >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
+          <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2.5} />
           Back to website
         </a>
       </div>

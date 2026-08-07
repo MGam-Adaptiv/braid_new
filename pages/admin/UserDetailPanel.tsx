@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Shield, RefreshCw, Ban, Star, Gift, CheckCircle, Trash2, Pencil, ScanLine, FileText, Zap, Repeat, BookOpen, Lightbulb } from 'lucide-react';
+import { X, Shield, RefreshCw, Ban, Star, Gift, CheckCircle, Trash2, Pencil, ScanLine, FileText, Zap, Repeat, BookOpen, Lightbulb, ChevronDown } from 'lucide-react';
 import { db, increment, auth } from '../../lib/firebase';
 import toast from 'react-hot-toast';
 
@@ -338,7 +338,7 @@ export default function UserDetailPanel({ user, onClose, onUpdate }: UserDetailP
                   <option value={100000}>+ 100,000 Tokens</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                  <ChevronDown className="w-4 h-4" strokeWidth={2} />
                 </div>
               </div>
               <button onClick={sendGift} disabled={loading}
@@ -360,7 +360,7 @@ export default function UserDetailPanel({ user, onClose, onUpdate }: UserDetailP
                   <option value={5.00}>+ €5.00</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                  <ChevronDown className="w-4 h-4" strokeWidth={2} />
                 </div>
               </div>
               <button onClick={addBudget} disabled={loading}
