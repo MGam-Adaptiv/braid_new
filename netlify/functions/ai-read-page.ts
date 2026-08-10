@@ -137,18 +137,18 @@ PAGE NUMBER:
 Read the page number printed on the page (usually bottom-left, bottom-right, or top corner). Return the integer only. Return null if not visible or if this is a cover/intro page with no number.
 
 Return ONLY valid JSON:
-{
-  "targetVocabulary": { "items": ["..."], "count": 8 },
-  "contextVocabulary": { "items": ["..."], "count": 12 },
-  "grammar": { "points": ["..."], "count": 2, "confidence": "high" },
-  "readingText": { "content": "passage text", "present": true, "title": "Heading", "confidence": "high" },
-  "topic": "...",
-  "estimatedLevel": "A1",
-  "levelConfidence": "high",
-  "levelReasoning": "Brief explanation of level choice based on grammar and vocabulary observed",
-  "pageType": "mixed",
-  "pageNumber": 34
-}`,
+  {
+    "targetVocabulary": { "items": ["..."], "count": 8 },
+    "contextVocabulary": { "items": ["..."], "count": 12 },
+    "grammar": { "points": ["..."], "count": 2, "confidence": "high" },
+    "readingText": { "content": "passage text", "present": true, "title": "Heading", "confidence": "high" },
+    "topic": "...",
+    "estimatedLevel": "<Pre-A1|A1|A2|B1|B2|C1|C2 — determine strictly from the criteria above, do not default to any single value>",
+    "levelConfidence": "<high|medium|low>",
+    "levelReasoning": "Brief explanation of level choice based on grammar and vocabulary observed",
+    "pageType": "mixed",
+    "pageNumber": 34
+  }`,
             },
           ],
         },
