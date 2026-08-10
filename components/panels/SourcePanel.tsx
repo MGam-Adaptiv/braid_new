@@ -151,7 +151,7 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
     setStage('CONFIRMING');
   };
 
-  const executeSave = async () => {
+const executeSave = async () => {
     if (!user) return;
     try {
       const finalPublisher = formPublisher === 'Other...' ? customPublisher : formPublisher;
@@ -164,7 +164,6 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({ layout = 'vertical' })
         secondaryVocabulary: secondaryVocab,
         vocabulary: [...coreVocab, ...secondaryVocab], grammar: [...coreGrammar, ...secondaryGrammar],
         topic: editedTopic, level: selectedLevel, pageCount: pages.length,
-        ocrTexts: pages.map(p => p.analysis?.readingText?.content || ''),
         pageNumbers: pages.map(p => p.analysis?.pageNumber ?? null)
       };
       await saveMaterial(user.uid, materialData);
